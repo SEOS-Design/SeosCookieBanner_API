@@ -7,6 +7,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 
 // vilken hemsida använder bannern
 export const websites = pgTable("websites", {
@@ -133,3 +134,21 @@ export const consentCategoryRelations = relations(
     choices: many(consentChoice),
   })
 );
+
+//InferSelectModel = när man läser från DB
+//InferInsertModel = när man skriver till DB
+// Website types
+export type Website = InferSelectModel<typeof websites>;
+export type NewWebsite = InferInsertModel<typeof websites>;
+// Identity types
+export type Identity = InferSelectModel<typeof identity>;
+export type NewIdentity = InferInsertModel<typeof identity>;
+// Consent_category types
+export type ConsentCategory = InferSelectModel<typeof consentCategory>;
+export type NewConsentCategory = InferInsertModel<typeof consentCategory>;
+// Consent_event types
+export type ConsentEvent = InferSelectModel<typeof consentEvent>;
+export type NewConsentEvent = InferInsertModel<typeof consentEvent>;
+//Consent_choice types
+export type ConsentChoice = InferSelectModel<typeof consentChoice>;
+export type NewConsentChoice = InferInsertModel<typeof consentChoice>;

@@ -6,6 +6,8 @@ export const consentSchema = z.object({
   analytics: z.boolean(),
   marketing: z.boolean(),
   functional: z.boolean(),
+  client_id: z.string().uuid(),
+  domain: z.string().min(1),
   status: z.enum(["all", "necessary_only", "custom"]),
   timestamp: z.string(),
   policyVersion: z.string().optional(),
