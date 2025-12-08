@@ -56,6 +56,29 @@ export const consentCategory = pgTable(
   })
 );
 
+export const policyVersion = pgTable(
+  "policy_version",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    website_id: uuid("website_id")
+      .notNull()
+      .references(() => websites.id),
+    version_label: text("version_label").notNull(),
+    content_html: text("content_html").notNull(),
+    valid_from: timestamp("valid_from", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    policyVersionUnique: unique("policy_version_unique").on(
+      table.website_id,
+      table.version_label
+    ),
+  })
+);
 export const consentEvent = pgTable("consent_event", {
   id: uuid("id").primaryKey().defaultRandom(),
   website_id: uuid("website_id")
@@ -64,9 +87,11 @@ export const consentEvent = pgTable("consent_event", {
   identity_id: uuid("identity_id")
     .notNull()
     .references(() => identity.id),
+  policy_version_id: uuid("policy_version_id")
+    .notNull()
+    .references(() => policyVersion.id),
   event_type: text("event_type").notNull(),
   user_agent: text("user_agent"),
-  policy_version_text: text("policy_version_text"),
   created_at: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -89,6 +114,7 @@ export const websiteRelations = relations(websites, ({ many }) => ({
   identities: many(identity),
   categories: many(consentCategory),
   events: many(consentEvent),
+  policies: many(policyVersion),
 }));
 
 export const identityRelations = relations(identity, ({ one, many }) => ({
@@ -104,6 +130,10 @@ export const identityRelations = relations(identity, ({ one, many }) => ({
 export const consentEventRelations = relations(
   consentEvent,
   ({ one, many }) => ({
+    website: one(websites, {
+      fields: [consentEvent.website_id],
+      references: [websites.id],
+    }),
     // Ett event tillhör EN identitet
     identity: one(identity, {
       fields: [consentEvent.identity_id],
@@ -111,6 +141,11 @@ export const consentEventRelations = relations(
     }),
     // Ett event har MÅNGA val (choice)
     choices: many(consentChoice),
+
+    policyVersion: one(policyVersion, {
+      fields: [consentEvent.policy_version_id],
+      references: [policyVersion.id],
+    }),
   })
 );
 
@@ -129,11 +164,22 @@ export const consentChoiceRelations = relations(consentChoice, ({ one }) => ({
 
 export const consentCategoryRelations = relations(
   consentCategory,
-  ({ many }) => ({
+  ({ one, many }) => ({
+    website: one(websites, {
+      fields: [consentCategory.website_id],
+      references: [websites.id],
+    }),
     // En kategori har MÅNGA val
     choices: many(consentChoice),
   })
 );
+
+export const policyVersionRelations = relations(policyVersion, ({ one }) => ({
+  website: one(websites, {
+    fields: [policyVersion.website_id],
+    references: [websites.id],
+  }),
+}));
 
 //InferSelectModel = när man läser från DB
 //InferInsertModel = när man skriver till DB

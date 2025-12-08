@@ -1,10 +1,27 @@
 import "dotenv/config";
 import { eq } from "drizzle-orm";
 import { db } from "../db/client";
-import { websites, consentCategory, type Website } from "../db/schema";
+import {
+  websites,
+  consentCategory,
+  policyVersion,
+  type Website,
+  ConsentCategory,
+} from "../db/schema";
 
 const TEST_DOMAIN = "127.0.0.1";
 const TEST_SITE_NAME = "Local Dev Server";
+
+const POLICY_CONTENT_HTML = `
+<h2>Cookie Policy - Version 1.0.1</h2>
+<p>Denna policy trädde i kraft ${new Date().toLocaleDateString(
+  "sv-SE"
+)} och ersätter alla tidigare versioner.</p>
+<h3>1. Nödvändiga Cookies</h3>
+<p>Dessa är nödvändiga för att webbplatsen ska fungera och kan inte stängas av.</p>
+<h3>Cookies för Statistik</h3>
+<p>Vi använder analytiska cookies för att mäta trafik och förbättra din upplevelse</p>
+`;
 
 const categoriesToSeed = [
   {
@@ -34,7 +51,7 @@ const seed = async () => {
   try {
     console.log("Starting Database Seeding...");
 
-    console.log(`[1/2] Seeding website: ${TEST_DOMAIN}`);
+    console.log(`[1/3] Seeding website: ${TEST_DOMAIN}`);
 
     const websiteRow = await db
       .select()
@@ -61,7 +78,32 @@ const seed = async () => {
       throw new Error("Could not find or create website row.");
     }
     const websiteId = website.id;
-    console.log("Seeding consent categories...");
+
+    console.log("[2/3] Seeding initial policy Version");
+
+    const [policy] = await db
+      .insert(policyVersion)
+      .values({
+        website_id: websiteId,
+        version_label: "1.0.1",
+        content_html: POLICY_CONTENT_HTML,
+        valid_from: new Date(),
+      })
+
+      .onConflictDoNothing({
+        target: [policyVersion.website_id, policyVersion.version_label],
+      })
+      .returning({ id: policyVersion.id });
+
+    const policyVersionId = policy?.id;
+
+    console.log(
+      `[Policy] Seeded version 1.0.1 with ID: ${
+        policyVersionId || "Already Existed"
+      }`
+    );
+
+    console.log(" [3/3] Seeding consent categories...");
     for (const cat of categoriesToSeed) {
       await db
         .insert(consentCategory)

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import {
   consentValidator,
   type ConsentPayload,
@@ -13,6 +13,7 @@ import {
   consentChoice,
   type NewIdentity,
   type Identity,
+  policyVersion,
 } from "../db/schema";
 
 const CATEGORY_KEYS = [
@@ -60,6 +61,23 @@ consentRoute.post("/", consentValidator, async (c) => {
     // Skapa Map för snabb översättning (key -> id)
     const categoryMap = new Map(categoryRows.map((cat) => [cat.key, cat.id]));
 
+    // Hitta den aktiva policyversionen
+    const policyResult = await db
+      .select({ id: policyVersion.id })
+      .from(policyVersion)
+      .where(eq(policyVersion.website_id, websiteId))
+      .orderBy(desc(policyVersion.valid_from))
+      .limit(1);
+
+    const policyVersionId = policyResult[0]?.id;
+
+    if (!policyVersionId) {
+      return c.json(
+        { message: "Missing active policy version for this domain" },
+        500
+      );
+    }
+
     // STARTA TRANSAKTIONEN
     const result = await db.transaction(async (tx) => {
       let userIdentity: Identity | undefined;
@@ -103,7 +121,7 @@ consentRoute.post("/", consentValidator, async (c) => {
           identity_id: identityId,
           event_type: body.status,
           user_agent: body.userAgent,
-          policy_version_text: body.policyVersion,
+          policy_version_id: policyVersionId,
         })
         .returning();
 
@@ -174,5 +192,52 @@ consentRoute.post("/", consentValidator, async (c) => {
       },
       500
     );
+  }
+});
+
+consentRoute.get("/policy/latest", async (c) => {
+  try {
+    const domain = c.req.query("domain");
+
+    if (!domain) {
+      return c.json({ message: "domain query parameter missing." }, 400);
+    }
+
+    console.log(`[POLICY] Hämta policy för domän: ${domain}`);
+
+    const websiteRow = await db
+      .select({ id: websites.id })
+      .from(websites)
+      .where(eq(websites.domain, domain))
+      .limit(1);
+
+    if (!websiteRow[0]) {
+      console.error(`[POLICY] Domän inte hittad i DB: ${domain}`);
+      return c.json({ message: `Domain "${domain}" not found` }, 404);
+    }
+
+    const websiteId = websiteRow[0].id;
+    console.log(`[POLICY] Website ID: ${websiteId}`);
+
+    const latestPolicy = await db
+      .select()
+      .from(policyVersion)
+      .where(eq(policyVersion.website_id, websiteId))
+      .orderBy(desc(policyVersion.valid_from))
+      .limit(1);
+
+    if (!latestPolicy[0]) {
+      console.error("[POLICY] Hittade ingen aktiv policyrad.");
+      return c.json({ message: "No active policy found for this domain" }, 404);
+    }
+    console.log(`[POLICY] Laddade version: ${latestPolicy[0].version_label}`);
+
+    return c.json({
+      version: latestPolicy[0].version_label,
+      content: latestPolicy[0].content_html,
+    });
+  } catch (error) {
+    console.error("Policy retrieval error:", error);
+    return c.json({ message: "Server error during retrieval" }, 500);
   }
 });
