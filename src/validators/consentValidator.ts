@@ -10,7 +10,6 @@ export const consentSchema = z.object({
   domain: z.string().min(1),
   status: z.enum(["all", "necessary_only", "custom"]),
   timestamp: z.string(),
-  policyVersion: z.string().optional(),
   userAgent: z.string().optional(),
 });
 

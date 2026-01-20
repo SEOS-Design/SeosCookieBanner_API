@@ -9,7 +9,7 @@ import {
 import { relations } from "drizzle-orm";
 import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 
-// vilken hemsida använder bannern
+// WHICH WEBSITE IS USING THE BANNER
 export const websites = pgTable("websites", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
@@ -19,7 +19,7 @@ export const websites = pgTable("websites", {
     .defaultNow(),
 });
 
-// Unikt client id per hemsida
+// UNIQUE CLIENT ID PER WEBSITE
 export const identity = pgTable(
   "identity",
   {
@@ -35,9 +35,9 @@ export const identity = pgTable(
   (table) => ({
     identityUnique: unique("identity_unique").on(
       table.website_id,
-      table.client_id
+      table.client_id,
     ),
-  })
+  }),
 );
 
 export const consentCategory = pgTable(
@@ -53,7 +53,7 @@ export const consentCategory = pgTable(
   },
   (table) => ({
     siteKeyUnique: unique("site_key_unique").on(table.website_id, table.key),
-  })
+  }),
 );
 
 export const policyVersion = pgTable(
@@ -75,9 +75,9 @@ export const policyVersion = pgTable(
   (table) => ({
     policyVersionUnique: unique("policy_version_unique").on(
       table.website_id,
-      table.version_label
+      table.version_label,
     ),
-  })
+  }),
 );
 export const consentEvent = pgTable("consent_event", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -108,9 +108,9 @@ export const consentChoice = pgTable("consent_choice", {
   status: boolean("status").notNull(),
 });
 
-// Relationer
+// RELATIONS
 export const websiteRelations = relations(websites, ({ many }) => ({
-  // En hemsida har många identiteter, kategorier och event
+  // ONE WEBSITE HAS MANY IDENTITITES, CATEGORIES AND EVENTS
   identities: many(identity),
   categories: many(consentCategory),
   events: many(consentEvent),
@@ -118,12 +118,12 @@ export const websiteRelations = relations(websites, ({ many }) => ({
 }));
 
 export const identityRelations = relations(identity, ({ one, many }) => ({
-  // En identitet/användare tillhör En hemsida
+  // ONE IDENTITY/USER BELONGS TO ONE WEBSITE
   website: one(websites, {
     fields: [identity.website_id],
     references: [websites.id],
   }),
-  // En identitet har MÅNGA samtyckeshändelser
+  //  ONE IDENTITY HAS MANY CONSENTECENTS
   consentEvents: many(consentEvent),
 }));
 
@@ -134,28 +134,28 @@ export const consentEventRelations = relations(
       fields: [consentEvent.website_id],
       references: [websites.id],
     }),
-    // Ett event tillhör EN identitet
+    // ONE EVENT BELONGS TO ONE IDENTITY
     identity: one(identity, {
       fields: [consentEvent.identity_id],
       references: [identity.id],
     }),
-    // Ett event har MÅNGA val (choice)
+    // ONE EVENT HAS MANY CHOICES
     choices: many(consentChoice),
 
     policyVersion: one(policyVersion, {
       fields: [consentEvent.policy_version_id],
       references: [policyVersion.id],
     }),
-  })
+  }),
 );
 
 export const consentChoiceRelations = relations(consentChoice, ({ one }) => ({
-  //Ett val tillhör ETT event
+  //ONE CHOICE BELONGS TO ONE EVENT
   event: one(consentEvent, {
     fields: [consentChoice.consent_event_id],
     references: [consentEvent.id],
   }),
-  // Ett val tillhör EN kategori
+  // ONE CHOICE BELONGS TO ONE CATEGORY
   category: one(consentCategory, {
     fields: [consentChoice.consent_category_id],
     references: [consentCategory.id],
@@ -169,9 +169,9 @@ export const consentCategoryRelations = relations(
       fields: [consentCategory.website_id],
       references: [websites.id],
     }),
-    // En kategori har MÅNGA val
+    // ONE CATEGORY HAS MANY CHOICES
     choices: many(consentChoice),
-  })
+  }),
 );
 
 export const policyVersionRelations = relations(policyVersion, ({ one }) => ({
