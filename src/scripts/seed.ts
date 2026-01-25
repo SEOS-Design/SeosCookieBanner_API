@@ -9,8 +9,8 @@ import {
   ConsentCategory,
 } from "../db/schema";
 
-const TEST_DOMAIN = "127.0.0.1";
-const TEST_SITE_NAME = "Local Dev Server";
+const TEST_DOMAIN = process.env.SEED_DOMAIN || "127.0.0.1";
+const TEST_SITE_NAME = process.env.SEED_SITE_NAME || "Local Dev Server";
 
 const CURRENT_POLICY_VERSION = "1.0.1";
 

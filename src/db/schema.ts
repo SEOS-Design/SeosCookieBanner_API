@@ -181,8 +181,8 @@ export const policyVersionRelations = relations(policyVersion, ({ one }) => ({
   }),
 }));
 
-//InferSelectModel = när man läser från DB
-//InferInsertModel = när man skriver till DB
+//InferSelectModel = when reading from DB
+//InferInsertModel = when writing to DB
 // Website types
 export type Website = InferSelectModel<typeof websites>;
 export type NewWebsite = InferInsertModel<typeof websites>;

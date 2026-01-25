@@ -30,10 +30,10 @@ consentRoute.post("/", consentValidator, async (c) => {
     const body = c.req.valid("json") as ConsentPayload;
 
     console.log(
-      `[Request] Consent from domain: ${body.domain}, client: ${body.client_id}`
+      `[Request] Consent from domain: ${body.domain}, client: ${body.client_id}`,
     );
 
-    // Hitta den anropande hemsidans ID
+    // Find the ID of the website
     const website = await db.query.websites.findFirst({
       where: eq(websites.domain, body.domain),
       columns: { id: true },
@@ -43,12 +43,12 @@ consentRoute.post("/", consentValidator, async (c) => {
       console.log(`[403] Domain not registered: ${body.domain}`);
       return c.json(
         { message: `Domain '${body.domain}' is not registered.` },
-        403
+        403,
       );
     }
     const websiteId = website.id;
 
-    // Hämta alla kategorier för hemsidan
+    // Find all categories for the website
     const categoryRows = await db.query.consentCategory.findMany({
       where: eq(consentCategory.website_id, websiteId),
       columns: { id: true, key: true },
@@ -58,10 +58,10 @@ consentRoute.post("/", consentValidator, async (c) => {
       throw new Error(`No categories found for website ID: ${websiteId}`);
     }
 
-    // Skapa Map för snabb översättning (key -> id)
+    // create map for translating key -> id
     const categoryMap = new Map(categoryRows.map((cat) => [cat.key, cat.id]));
 
-    // Hitta den aktiva policyversionen
+    // Find active policyversion
     const policyResult = await db
       .select({ id: policyVersion.id })
       .from(policyVersion)
@@ -74,19 +74,19 @@ consentRoute.post("/", consentValidator, async (c) => {
     if (!policyVersionId) {
       return c.json(
         { message: "Missing active policy version for this domain" },
-        500
+        500,
       );
     }
 
-    // STARTA TRANSAKTIONEN
+    // START TRANSACTION
     const result = await db.transaction(async (tx) => {
       let userIdentity: Identity | undefined;
 
-      // UPSERT IDENTITY (Hitta eller Skapa Användaren)
+      // UPSERT IDENTITY (find or create user)
       const existingIdentity = await tx.query.identity.findFirst({
         where: and(
           eq(identity.client_id, body.client_id),
-          eq(identity.website_id, websiteId)
+          eq(identity.website_id, websiteId),
         ),
       });
 
@@ -94,7 +94,7 @@ consentRoute.post("/", consentValidator, async (c) => {
         userIdentity = existingIdentity;
         console.log(`[Identity] Found existing: ${userIdentity.id}`);
       } else {
-        // Skapa ny rad (INSERT)
+        // create new row (INSERT)
         const newIdentityData: NewIdentity = {
           website_id: websiteId,
           client_id: body.client_id,
@@ -113,7 +113,7 @@ consentRoute.post("/", consentValidator, async (c) => {
 
       const identityId = userIdentity.id;
 
-      // INSERT CONSENT_EVENT (Skapa händelsen)
+      // INSERT CONSENT_EVENT (create event)
       const [event] = await tx
         .insert(consentEvent)
         .values({
@@ -132,7 +132,7 @@ consentRoute.post("/", consentValidator, async (c) => {
       const consentEventId = event.id;
       console.log(`[Event] Created: ${consentEventId}`);
 
-      // INSERT CONSENT_CHOICE (Skapa detaljerade val)
+      // INSERT CONSENT_CHOICE (Skapa detailed choices)
       const choicesToInsert = [];
 
       for (const key of CATEGORY_KEYS) {
@@ -140,7 +140,7 @@ consentRoute.post("/", consentValidator, async (c) => {
 
         if (!categoryId) {
           console.log(
-            `[Warning] Category '${key}' not found in database. Skipping.`
+            `[Warning] Category '${key}' not found in database. Skipping.`,
           );
           continue;
         }
@@ -165,7 +165,7 @@ consentRoute.post("/", consentValidator, async (c) => {
     });
 
     console.log(
-      `[Success] Consent recorded for ${body.domain}: Event ${result.consentEventId}`
+      `[Success] Consent recorded for ${body.domain}: Event ${result.consentEventId}`,
     );
 
     return c.json(
@@ -179,7 +179,7 @@ consentRoute.post("/", consentValidator, async (c) => {
           timestamp: new Date().toISOString(),
         },
       },
-      201
+      201,
     );
   } catch (error) {
     console.error("[Error] Database transaction failed:", error);
@@ -190,7 +190,7 @@ consentRoute.post("/", consentValidator, async (c) => {
         error:
           process.env.NODE_ENV === "development" ? String(error) : undefined,
       },
-      500
+      500,
     );
   }
 });
