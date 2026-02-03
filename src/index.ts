@@ -10,7 +10,11 @@ const app = new Hono();
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",")
-  : ["http://127.0.0.1:5500", "http://localhost:5500"];
+  : [
+      "http://127.0.0.1:5500",
+      "http://localhost:5500",
+      "https://seosdesign.webflow.io",
+    ];
 
 app.use(
   "*",
