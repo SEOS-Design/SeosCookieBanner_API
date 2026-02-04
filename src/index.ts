@@ -15,6 +15,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       "http://localhost:5500",
       "https://seosdesign.webflow.io",
       "https://www.seosdesign.se/",
+      "https://seosdesign.se",
     ];
 
 app.use(
