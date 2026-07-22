@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import {
   consentValidator,
   type ConsentPayload,
@@ -11,8 +11,6 @@ import {
   consentCategory,
   consentEvent,
   consentChoice,
-  type NewIdentity,
-  type Identity,
   policyVersion,
 } from "../db/schema";
 
@@ -80,35 +78,21 @@ consentRoute.post("/", consentValidator, async (c) => {
 
     // START TRANSACTION
     const result = await db.transaction(async (tx) => {
-      let userIdentity: Identity | undefined;
-
-      // UPSERT IDENTITY (find or create user)
-      const existingIdentity = await tx.query.identity.findFirst({
-        where: and(
-          eq(identity.client_id, body.client_id),
-          eq(identity.website_id, websiteId),
-        ),
-      });
-
-      if (existingIdentity) {
-        userIdentity = existingIdentity;
-        console.log(`[Identity] Found existing: ${userIdentity.id}`);
-      } else {
-        // create new row (INSERT)
-        const newIdentityData: NewIdentity = {
+      // UPSERT IDENTITY (atomär — undviker find-then-insert race vid samtidiga anrop)
+      const [userIdentity] = await tx
+        .insert(identity)
+        .values({
           website_id: websiteId,
           client_id: body.client_id,
-        };
-        const [newIdentity] = await tx
-          .insert(identity)
-          .values(newIdentityData)
-          .returning();
+        })
+        .onConflictDoUpdate({
+          target: [identity.website_id, identity.client_id],
+          set: { client_id: body.client_id },
+        })
+        .returning();
 
-        if (!newIdentity) {
-          throw new Error("Identity insertion failed unexpectedly.");
-        }
-        userIdentity = newIdentity;
-        console.log(`[Identity] Created new: ${userIdentity.id}`);
+      if (!userIdentity) {
+        throw new Error("Identity upsert failed unexpectedly.");
       }
 
       const identityId = userIdentity.id;
