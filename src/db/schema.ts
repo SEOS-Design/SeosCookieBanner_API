@@ -46,7 +46,7 @@ export const consentCategory = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     website_id: uuid("website_id")
       .notNull()
-      .references(() => websites.id),
+      .references(() => websites.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     description: text("description"),
     is_required: boolean("is_required").notNull(),
@@ -62,7 +62,7 @@ export const policyVersion = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     website_id: uuid("website_id")
       .notNull()
-      .references(() => websites.id),
+      .references(() => websites.id, { onDelete: "cascade" }),
     version_label: text("version_label").notNull(),
     content_html: text("content_html").notNull(),
     valid_from: timestamp("valid_from", { withTimezone: true })
@@ -83,13 +83,13 @@ export const consentEvent = pgTable("consent_event", {
   id: uuid("id").primaryKey().defaultRandom(),
   website_id: uuid("website_id")
     .notNull()
-    .references(() => websites.id),
+    .references(() => websites.id, { onDelete: "cascade" }),
   identity_id: uuid("identity_id")
     .notNull()
-    .references(() => identity.id),
+    .references(() => identity.id, { onDelete: "cascade" }),
   policy_version_id: uuid("policy_version_id")
     .notNull()
-    .references(() => policyVersion.id),
+    .references(() => policyVersion.id, { onDelete: "cascade" }),
   event_type: text("event_type").notNull(),
   user_agent: text("user_agent"),
   created_at: timestamp("created_at", { withTimezone: true })
@@ -104,7 +104,7 @@ export const consentChoice = pgTable("consent_choice", {
     .references(() => consentEvent.id, { onDelete: "cascade" }),
   consent_category_id: uuid("consent_category_id")
     .notNull()
-    .references(() => consentCategory.id),
+    .references(() => consentCategory.id, { onDelete: "cascade" }),
   status: boolean("status").notNull(),
 });
 
