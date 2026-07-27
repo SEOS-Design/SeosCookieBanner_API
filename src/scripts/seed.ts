@@ -12,120 +12,132 @@ import {
 const TEST_DOMAIN = process.env.SEED_DOMAIN || "127.0.0.1";
 const TEST_SITE_NAME = process.env.SEED_SITE_NAME || "Local Dev Server";
 
-const CURRENT_POLICY_VERSION = "1.0.1";
+const CURRENT_POLICY_VERSION = "1.0.2";
 
 const today = new Date().toISOString().split("T")[0];
 
 const POLICY_CONTENT_HTML = `
 <div class="policy-container">
-  <h3>1. Introduction</h3>
-  <p>
-    This cookie policy explains how cookies are used on this website, what they are used for and how you can manage your preferences.
-  </p>
-  <p>
-    Cookies may be placed either by the website operator or by third-party services integrated into the website.
-  </p>
+    <h3>1. Introduktion</h3>
+    <p>
+      Denna cookiepolicy förklarar hur cookies används på denna webbplats, vad de används till och hur du kan hantera
+  dina inställningar.
+    </p>
+    <p>
+      Cookies kan placeras antingen av webbplatsoperatören eller av tredjepartstjänster som är integrerade i
+  webbplatsen.
+    </p>
 
-  <h3>2. What are cookies?</h3>
-  <p>
-    Cookies are small text files that are placed on your device (computer, tablet or mobile) when you visit a website. Cookies are widely used to make websites work more efficiently, improve user experience and provide information to the website operator. 
-  </p>
+    <h3>2. Vad är cookies?</h3>
+    <p>
+      Cookies är små textfiler som placeras på din enhet (dator, surfplatta eller mobil) när du besöker en webbplats.
+  Cookies används allmänt för att webbplatser ska fungera effektivare, förbättra användarupplevelsen och ge information
+  till webbplatsoperatören.
+    </p>
 
-  <h3>3. Legal basis for the use of cookies</h3>
-  <p>
-    The use of strictly necessary cookies is based on the website operator's legitimate interest in ensuring the proper functioning of the website.
-  </p>
-  <p>
-    All other cookies are only used after you have given your explicit consent.
-  </p>
-  
-  <h3>4. Consent management</h3>
-  <p>
-    When you first visit this website, you are asked to make a choice regarding the use of cookies. Your preferences are stored to ensure that your choices are respected on future visits.
-  </p>
-  <p>
-    You can change or withdraw your consent at any time by reopening the cookie settings via the link or button available on this website.
-  </p>
+    <h3>3. Rättslig grund för användning av cookies</h3>
+    <p>
+      Användningen av strikt nödvändiga cookies grundar sig på webbplatsoperatörens berättigade intresse av att
+  säkerställa webbplatsens korrekta funktion.
+    </p>
+    <p>
+      Alla andra cookies används enbart efter att du lämnat ditt uttryckliga samtycke.
+    </p>
 
-  <h3>5. Strictly Necessary Cookies</h3>
-  <p>These cookies are essential for the website to function properly and cannot be disabled. They do not require your consent.</p>
+    <h3>4. Samtyckeshantering</h3>
+    <p>
+      När du besöker webbplatsen för första gången ombeds du att göra ett val angående användningen av cookies. Dina
+  inställningar sparas för att säkerställa att dina val respekteras vid framtida besök.
+    </p>
+    <p>
+      Du kan när som helst ändra eller återkalla ditt samtycke genom att öppna cookieinställningarna via den länk eller
+  knapp som finns tillgänglig på webbplatsen.
+    </p>
 
-  <div class="table-wrapper">
-    <table class="policy-table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Purpose</th>
-          <th>Duration</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>consent_status</strong></td>
-          <td>Stores your general cookie consent choice.</td>
-          <td>30 days</td>
-        </tr>
-        <tr>
-          <td><strong>consent_choices</strong></td>
-          <td>Stores detailed cookie category preferences.</td>
-          <td>30 days</td>
-        </tr>
-        <tr>
-          <td><strong>client_consent_id</strong></td>
-          <td>A unique, anonymous ID used to audit compliance and prove that valid consent was given.</td>
-          <td>365 days</td>
-        </tr>
-      </tbody>
-    </table>
+    <h3>5. Strikt nödvändiga cookies</h3>
+    <p>Dessa cookies är nödvändiga för att webbplatsen ska fungera korrekt och kan inte inaktiveras. De kräver inte ditt
+   samtycke.</p>
+
+    <div class="table-wrapper">
+      <table class="policy-table">
+        <thead>
+          <tr>
+            <th>Namn</th>
+            <th>Syfte</th>
+            <th>Varaktighet</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>consent_status</strong></td>
+            <td>Lagrar ditt allmänna val gällande cookie-samtycke.</td>
+            <td>30 dagar</td>
+          </tr>
+          <tr>
+            <td><strong>consent_choices</strong></td>
+            <td>Lagrar detaljerade inställningar för cookiekategorier.</td>
+            <td>30 dagar</td>
+          </tr>
+          <tr>
+            <td><strong>client_consent_id</strong></td>
+            <td>Ett unikt, anonymt ID som används för att verifiera att ett giltigt samtycke har lämnats.</td>
+            <td>365 dagar</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>6. Valfria cookies och tredjepartstjänster</h3>
+    <p>
+      Med ditt samtycke kan denna webbplats använda tredjepartstjänster såsom analysverktyg eller
+  marknadsföringsverktyg. Dessa cookies används för att förstå hur besökare interagerar med webbplatsen och för att
+  förbättra dess funktionalitet och innehåll.
+    </p>
+
+    <div class="table-wrapper">
+      <table class="policy-table">
+        <thead>
+          <tr>
+            <th>Tjänst</th>
+            <th>Kategori</th>
+            <th>Syfte</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Google Analytics</td>
+            <td>Analys</td>
+            <td>Samlar in information om webbplatsanvändning för att förbättra prestanda och användarupplevelse.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>7. Google Consent Mode</h3>
+    <p>
+      Denna webbplats använder Google Consent Mode för att säkerställa att Googles tjänster respekterar dina
+  samtyckesval. Beroende på ditt val kan Google-taggar anpassa sitt beteende.
+    </p>
+
+    <h3>8. Personuppgiftsansvarig</h3>
+    <p>
+      Webbplatsoperatören är personuppgiftsansvarig för behandlingen av personuppgifter på denna webbplats.
+    </p>
+    <p>
+      För information om hur du kontaktar webbplatsoperatören, se kontaktuppgifterna på webbplatsen.
+    </p>
+
+    <h3>9. Uppdateringar av denna policy</h3>
+    <p>
+      Denna cookiepolicy kan komma att uppdateras för att återspegla ändringar i lagkrav eller vår användning av
+  cookies.
+    </p>
+
+    <div class="policy-footer-note">
+      <p>Denna policy gäller från ${today}.</p>
+      <p>Aktuell version: ${CURRENT_POLICY_VERSION}</p>
+    </div>
   </div>
-      
-  <h3>6. Optional cookies and third-party services</h3>
-  <p>
-    With your consent, this website may use third-party services such as analytics or marketing tools. These cookies are used to understand how visitors interact with the website and to improve its functionality and content.
-  </p>
-
-  <div class="table-wrapper">
-    <table class="policy-table">
-      <thead>
-        <tr>
-          <th>Service</th>
-          <th>Category</th>
-          <th>Purpose</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Google Analytics</td>
-          <td>Analytics</td>
-          <td>Collects information about website usage to help improve performance and user experience.</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h3>7. Google Consent Mode</h3>
-  <p>
-    This website uses Google Consent Mode to ensure that Google services respect your consent choices. Depending on your selection, Google tags may adjust their behavior accordingly.
-  </p>
-
-  <h3>8. Data controller</h3>
-  <p>
-    The website operator is the data controller for the processing of personal data on this website.
-  </p>
-  <p>
-    For information about how to contact the website operator, please refer to the contact details provided on this website.
-  </p>
-
-  <h3>9. Updates to this policy</h3>
-  <p>
-    This Cookie Policy may be updated to reflect changes in legal requirements or our use of cookies.
-  </p>
-
-  <div class="policy-footer-note">
-    <p>This policy applies from ${today}.</p>
-    <p>Current version: ${CURRENT_POLICY_VERSION}</p>
-  </div>
-</div>
 `;
 
 const categoriesToSeed = [
