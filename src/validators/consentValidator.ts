@@ -9,11 +9,19 @@ export const consentSchema = z.object({
   client_id: z.string().uuid(),
   // Sajten identifieras i forsta hand via site_key. Domain behalls under
   // overgangen for sajter vars scripttagg annu saknar nyckel.
-  site_key: z.string().min(8).optional(),
-  domain: z.string().min(1),
+  site_key: z.string().min(8).max(64).optional(),
+  // Max langd for ett hostname enligt DNS.
+  domain: z.string().min(1).max(253),
   status: z.enum(["all", "necessary_only", "custom"]),
-  timestamp: z.string(),
-  userAgent: z.string().optional(),
+  timestamp: z.string().max(64),
+  // Kapas i stallet for att avvisas: ett ovanligt langt varde ska inte gora
+  // att ett giltigt samtycke aldrig hamnar i bevisloggen. Absurda payloads
+  // avvisas dock innan de nar databasen.
+  userAgent: z
+    .string()
+    .max(4096)
+    .transform((s) => s.slice(0, 512))
+    .optional(),
 });
 
 export type ConsentPayload = z.infer<typeof consentSchema>;
