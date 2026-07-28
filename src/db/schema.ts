@@ -1,6 +1,7 @@
 import {
   pgTable,
   unique,
+  index,
   boolean,
   text,
   uuid,
@@ -79,34 +80,61 @@ export const policyVersion = pgTable(
     ),
   }),
 );
-export const consentEvent = pgTable("consent_event", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  website_id: uuid("website_id")
-    .notNull()
-    .references(() => websites.id, { onDelete: "cascade" }),
-  identity_id: uuid("identity_id")
-    .notNull()
-    .references(() => identity.id, { onDelete: "cascade" }),
-  policy_version_id: uuid("policy_version_id")
-    .notNull()
-    .references(() => policyVersion.id, { onDelete: "cascade" }),
-  event_type: text("event_type").notNull(),
-  user_agent: text("user_agent"),
-  created_at: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const consentEvent = pgTable(
+  "consent_event",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    website_id: uuid("website_id")
+      .notNull()
+      .references(() => websites.id, { onDelete: "cascade" }),
+    identity_id: uuid("identity_id")
+      .notNull()
+      .references(() => identity.id, { onDelete: "cascade" }),
+    policy_version_id: uuid("policy_version_id")
+      .notNull()
+      .references(() => policyVersion.id, { onDelete: "cascade" }),
+    event_type: text("event_type").notNull(),
+    user_agent: text("user_agent"),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    // Rapportering per sajt och tidsperiod
+    websiteCreatedIdx: index("consent_event_website_created_idx").on(
+      table.website_id,
+      table.created_at,
+    ),
+    // Uppslag av en besokares historik (bevisforing vid tvist)
+    identityIdx: index("consent_event_identity_idx").on(table.identity_id),
+    // Kravs for att cascade-radering av policyversion ska ga snabbt
+    policyVersionIdx: index("consent_event_policy_version_idx").on(
+      table.policy_version_id,
+    ),
+  }),
+);
 
-export const consentChoice = pgTable("consent_choice", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  consent_event_id: uuid("consent_event_id")
-    .notNull()
-    .references(() => consentEvent.id, { onDelete: "cascade" }),
-  consent_category_id: uuid("consent_category_id")
-    .notNull()
-    .references(() => consentCategory.id, { onDelete: "cascade" }),
-  status: boolean("status").notNull(),
-});
+export const consentChoice = pgTable(
+  "consent_choice",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    consent_event_id: uuid("consent_event_id")
+      .notNull()
+      .references(() => consentEvent.id, { onDelete: "cascade" }),
+    consent_category_id: uuid("consent_category_id")
+      .notNull()
+      .references(() => consentCategory.id, { onDelete: "cascade" }),
+    status: boolean("status").notNull(),
+  },
+  (table) => ({
+    // Hamta valen for ett event + snabb cascade-radering
+    eventIdx: index("consent_choice_event_idx").on(table.consent_event_id),
+    // Cascade-radering fran kategori
+    categoryIdx: index("consent_choice_category_idx").on(
+      table.consent_category_id,
+    ),
+  }),
+);
 
 // RELATIONS
 export const websiteRelations = relations(websites, ({ many }) => ({
