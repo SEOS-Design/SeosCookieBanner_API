@@ -27,23 +27,38 @@ consentRoute.post("/", consentValidator, async (c) => {
   try {
     const body = c.req.valid("json") as ConsentPayload;
 
-    console.log(
-      `[Request] Consent from domain: ${body.domain}, client: ${body.client_id}`,
-    );
-
-    // Find the ID of the website
-    const website = await db.query.websites.findFirst({
-      where: eq(websites.domain, body.domain),
-      columns: { id: true },
-    });
+    // Identifiera sajten: site_key i forsta hand, domain som fallback under
+    // overgangen (sajter vars scripttagg annu saknar nyckel).
+    const website = body.site_key
+      ? await db.query.websites.findFirst({
+          where: eq(websites.site_key, body.site_key),
+          columns: { id: true, domain: true, allowed_origins: true },
+        })
+      : await db.query.websites.findFirst({
+          where: eq(websites.domain, body.domain),
+          columns: { id: true, domain: true, allowed_origins: true },
+        });
 
     if (!website) {
-      console.log(`[403] Domain not registered: ${body.domain}`);
       return c.json(
-        { message: `Domain '${body.domain}' is not registered.` },
+        {
+          message: body.site_key
+            ? "Invalid site key."
+            : `Domain '${body.domain}' is not registered.`,
+        },
         403,
       );
     }
+
+    // Origin-kontroll: binder nyckeln till sajtens egna adresser.
+    // Tom lista = ingen kontroll (utvecklingslage under uppsattning).
+    const origin = c.req.header("origin");
+    if (website.allowed_origins.length > 0) {
+      if (!origin || !website.allowed_origins.includes(origin)) {
+        return c.json({ message: "Origin not allowed for this site." }, 403);
+      }
+    }
+
     const websiteId = website.id;
 
     // Find all categories for the website

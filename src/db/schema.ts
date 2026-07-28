@@ -15,6 +15,12 @@ export const websites = pgTable("websites", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   domain: text("domain").notNull().unique(),
+  // Publik nyckel som identifierar sajten i stallet for hostname.
+  // Nullable under overgangen - blir obligatorisk nar alla sajter har en.
+  site_key: text("site_key").unique(),
+  // Tillatna origins for denna sajt (produktion + staging).
+  // Tom lista = ingen origin-kontroll (utvecklingslage).
+  allowed_origins: text("allowed_origins").array().notNull().default([]),
   created_at: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
