@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "../db/client";
 import {
@@ -14,7 +15,7 @@ import {
 const TEST_DOMAIN = process.env.SEED_DOMAIN || "127.0.0.1";
 const TEST_SITE_NAME = process.env.SEED_SITE_NAME || "Local Dev Server";
 
-const CURRENT_POLICY_VERSION = "1.0.2";
+const CURRENT_POLICY_VERSION = "1.0.3";
 
 
 // Policytexten bor i policies/base/<version>.html - EN kalla, versionshanterad i git.
@@ -67,6 +68,10 @@ const seed = async () => {
         .values({
           name: TEST_SITE_NAME,
           domain: TEST_DOMAIN,
+          // Genereras har sa att en ny sajt aldrig hamnar utan nyckel.
+          // Nyckeln ar PUBLIK (den ligger i kundens HTML) - den identifierar
+          // sajten, den ar ingen hemlighet.
+          site_key: `pk_live_${randomBytes(16).toString("hex")}`,
         })
         .returning();
 
@@ -125,6 +130,26 @@ const seed = async () => {
     }
 
     console.log("Seeding completed succesfully");
+
+    // Hamta nyckeln (sajten kan ha funnits sedan tidigare) och skriv ut
+    // en fardig scripttagg att klistra in pa kundens sajt.
+    const [klar] = await db
+      .select({ site_key: websites.site_key })
+      .from(websites)
+      .where(eq(websites.id, websiteId))
+      .limit(1);
+
+    console.log("\n----------------------------------------------------------");
+    console.log(`Site key for ${TEST_DOMAIN}:`);
+    console.log(`  ${klar?.site_key ?? "SAKNAS - kor migrering"}`);
+    console.log("\nKlistra in i <head> pa kundens sajt:\n");
+    console.log(
+      `<script src="https://seos-cookie-banner.vercel.app/js/script.js"\n` +
+        `        data-site-key="${klar?.site_key ?? ""}" async></script>`,
+    );
+    console.log("\nGlom inte: lagg till sajtens adress i ALLOWED_ORIGINS i Vercel");
+    console.log("och redeploya API:t.");
+    console.log("----------------------------------------------------------\n");
   } catch (error) {
     console.error("seeding failed:", error);
     process.exit(1);
