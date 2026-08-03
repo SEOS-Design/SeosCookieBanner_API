@@ -1,4 +1,6 @@
 import "dotenv/config";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { eq } from "drizzle-orm";
 import { db } from "../db/client";
 import {
@@ -14,131 +16,14 @@ const TEST_SITE_NAME = process.env.SEED_SITE_NAME || "Local Dev Server";
 
 const CURRENT_POLICY_VERSION = "1.0.2";
 
-const today = new Date().toISOString().split("T")[0];
 
-const POLICY_CONTENT_HTML = `
-<div class="policy-container">
-    <h3>1. Introduktion</h3>
-    <p>
-      Denna cookiepolicy förklarar hur cookies används på denna webbplats, vad de används till och hur du kan hantera
-  dina inställningar.
-    </p>
-    <p>
-      Cookies kan placeras antingen av webbplatsoperatören eller av tredjepartstjänster som är integrerade i
-  webbplatsen.
-    </p>
-
-    <h3>2. Vad är cookies?</h3>
-    <p>
-      Cookies är små textfiler som placeras på din enhet (dator, surfplatta eller mobil) när du besöker en webbplats.
-  Cookies används allmänt för att webbplatser ska fungera effektivare, förbättra användarupplevelsen och ge information
-  till webbplatsoperatören.
-    </p>
-
-    <h3>3. Rättslig grund för användning av cookies</h3>
-    <p>
-      Användningen av strikt nödvändiga cookies grundar sig på webbplatsoperatörens berättigade intresse av att
-  säkerställa webbplatsens korrekta funktion.
-    </p>
-    <p>
-      Alla andra cookies används enbart efter att du lämnat ditt uttryckliga samtycke.
-    </p>
-
-    <h3>4. Samtyckeshantering</h3>
-    <p>
-      När du besöker webbplatsen för första gången ombeds du att göra ett val angående användningen av cookies. Dina
-  inställningar sparas för att säkerställa att dina val respekteras vid framtida besök.
-    </p>
-    <p>
-      Du kan när som helst ändra eller återkalla ditt samtycke genom att öppna cookieinställningarna via den länk eller
-  knapp som finns tillgänglig på webbplatsen.
-    </p>
-
-    <h3>5. Strikt nödvändiga cookies</h3>
-    <p>Dessa cookies är nödvändiga för att webbplatsen ska fungera korrekt och kan inte inaktiveras. De kräver inte ditt
-   samtycke.</p>
-
-    <div class="table-wrapper">
-      <table class="policy-table">
-        <thead>
-          <tr>
-            <th>Namn</th>
-            <th>Syfte</th>
-            <th>Varaktighet</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>consent_status</strong></td>
-            <td>Lagrar ditt allmänna val gällande cookie-samtycke.</td>
-            <td>30 dagar</td>
-          </tr>
-          <tr>
-            <td><strong>consent_choices</strong></td>
-            <td>Lagrar detaljerade inställningar för cookiekategorier.</td>
-            <td>30 dagar</td>
-          </tr>
-          <tr>
-            <td><strong>client_consent_id</strong></td>
-            <td>Ett unikt, anonymt ID som används för att verifiera att ett giltigt samtycke har lämnats.</td>
-            <td>365 dagar</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>6. Valfria cookies och tredjepartstjänster</h3>
-    <p>
-      Med ditt samtycke kan denna webbplats använda tredjepartstjänster såsom analysverktyg eller
-  marknadsföringsverktyg. Dessa cookies används för att förstå hur besökare interagerar med webbplatsen och för att
-  förbättra dess funktionalitet och innehåll.
-    </p>
-
-    <div class="table-wrapper">
-      <table class="policy-table">
-        <thead>
-          <tr>
-            <th>Tjänst</th>
-            <th>Kategori</th>
-            <th>Syfte</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Google Analytics</td>
-            <td>Analys</td>
-            <td>Samlar in information om webbplatsanvändning för att förbättra prestanda och användarupplevelse.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>7. Google Consent Mode</h3>
-    <p>
-      Denna webbplats använder Google Consent Mode för att säkerställa att Googles tjänster respekterar dina
-  samtyckesval. Beroende på ditt val kan Google-taggar anpassa sitt beteende.
-    </p>
-
-    <h3>8. Personuppgiftsansvarig</h3>
-    <p>
-      Webbplatsoperatören är personuppgiftsansvarig för behandlingen av personuppgifter på denna webbplats.
-    </p>
-    <p>
-      För information om hur du kontaktar webbplatsoperatören, se kontaktuppgifterna på webbplatsen.
-    </p>
-
-    <h3>9. Uppdateringar av denna policy</h3>
-    <p>
-      Denna cookiepolicy kan komma att uppdateras för att återspegla ändringar i lagkrav eller vår användning av
-  cookies.
-    </p>
-
-    <div class="policy-footer-note">
-      <p>Denna policy gäller från ${today}.</p>
-      <p>Aktuell version: ${CURRENT_POLICY_VERSION}</p>
-    </div>
-  </div>
-`;
+// Policytexten bor i policies/base/<version>.html - EN kalla, versionshanterad i git.
+// Behover en sajt en avvikande text (t.ex. Meta-pixel) laggs den i
+// policies/<sajt>/<version>.html och publiceras med: npm run publish-policy
+const POLICY_CONTENT_HTML = readFileSync(
+  join("policies", "base", `${CURRENT_POLICY_VERSION}.html`),
+  "utf-8",
+);
 
 const categoriesToSeed = [
   {
