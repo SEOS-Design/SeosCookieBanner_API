@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { existsSync } from "fs";
+import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 import { desc, eq } from "drizzle-orm";
 import { db } from "../db/client";
@@ -39,17 +39,48 @@ const run = async () => {
 
     const aktiv = versioner[0];
     const kort = kortNamn(s.domain);
-    const harEgenMapp = existsSync(join("policies", kort));
 
     console.log(`${s.domain}  (${s.name})`);
-    console.log(`  Aktiv version : ${aktiv ? aktiv.label : "SAKNAS - bannern kan inte visa policy!"}`);
-    if (aktiv) {
-      console.log(`  Publicerad    : ${aktiv.valid_from.toISOString().split("T")[0]}`);
+
+    if (!aktiv) {
+      console.log("  Aktiv version : SAKNAS - bannern kan inte visa nagon policy!\n");
+      continue;
     }
-    console.log(`  Policykalla   : ${harEgenMapp ? `policies/${kort}/  (egen variant)` : "policies/base/  (basmall)"}`);
+
+    // Vilken fil den PUBLICERADE versionen kom fran - samma upplosningsregel
+    // som publishPolicy anvander. Kollar inte om mappen finns, utan vad som
+    // faktiskt ligger ute.
+    const egenFil = join("policies", kort, `${aktiv.label}.html`);
+    const kalla = existsSync(egenFil)
+      ? `policies/${kort}/  (egen variant)`
+      : `policies/base/  (basmall)`;
+
+    console.log(`  Aktiv version : ${aktiv.label}`);
+    console.log(`  Publicerad    : ${aktiv.valid_from.toISOString().split("T")[0]}`);
+    console.log(`  Kalla         : ${kalla}`);
+
     if (versioner.length > 1) {
       console.log(`  Tidigare      : ${versioner.slice(1).map((v) => v.label).join(", ")}`);
     }
+
+    // Finns fardiga filer som annu inte publicerats for den har sajten?
+    const publicerade = new Set(versioner.map((v) => v.label));
+    const opublicerade: string[] = [];
+    for (const mapp of [kort, "base"]) {
+      const dir = join("policies", mapp);
+      if (!existsSync(dir)) continue;
+      for (const f of readdirSync(dir)) {
+        if (!f.endsWith(".html")) continue;
+        const label = f.replace(/\.html$/, "");
+        if (!publicerade.has(label)) {
+          opublicerade.push(`${label} (policies/${mapp}/)`);
+        }
+      }
+    }
+    if (opublicerade.length > 0) {
+      console.log(`  EJ PUBLICERAD : ${[...new Set(opublicerade)].join(", ")}`);
+    }
+
     console.log("");
   }
 
