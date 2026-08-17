@@ -70,7 +70,7 @@ jobs:
 
       - name: Oppna eller uppdatera issue vid nedtid
         if: steps.ping.outputs.failed == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const url = "${{ steps.ping.outputs.bad_url }}";
