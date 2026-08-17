@@ -3,7 +3,6 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { consentRoute } from "./routes/consent";
 import { cors } from "hono/cors";
-import { rateLimiter } from "hono-rate-limiter";
 import { handle } from "hono/vercel";
 
 const app = new Hono();
@@ -27,16 +26,16 @@ app.use(
   }),
 );
 
-app.use(
-  rateLimiter({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    limit: 100, // Max 100 calls per IP adress during 15 minutes
-    standardHeaders: "draft-6",
-    keyGenerator: (c) => {
-      return c.req.header("x-forwarded-for") || "unknown";
-    },
-  }),
-);
+// Rate limiting sker i Vercels brandvagg (Firewall -> Custom Rules), inte har.
+//
+// Har lag tidigare en rateLimiter() fran hono-rate-limiter utan konfigurerad
+// store, vilket innebar att den anvande en raknare i minnet. Pa serverless har
+// varje funktionsinstans sitt eget minne, och Vercel startar nya instanser under
+// last - raknaren nollstalldes darfor hela tiden och delades aldrig mellan
+// instanser. Skyddet fanns i praktiken bara pa pappret.
+//
+// Den ar borttagen i stallet for ersatt, eftersom kod som ser ut att skydda men
+// inte gor det ar samre an ingen kod alls.
 
 app.get("/", (c) => c.json({ message: "Backend is working" }));
 
