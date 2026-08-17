@@ -1,0 +1,132 @@
+name: Uptime
+
+# Pingar produktionen varje timme och oppnar ett GitHub-issue om nagot slutar
+# svara 200. Idag upptacks driftstopp av en kund - det har ar for att vi ska
+# hinna fore.
+#
+# Tva adresser kollas, och den andra ar den viktiga:
+#   /                            -> bevisar bara att Vercel-funktionen lever
+#   /consent/policy/latest?...   -> bevisar att funktionen OCH Neon OCH
+#                                   fragevagen fungerar
+# Pingar man bara den forsta far man gron bock aven nar databasen ligger nere.
+#
+# Bada ar las-anrop. Inga rader skapas i databasen.
+#
+# Intervallet ar satt till en timme i stallet for 15 minuter for att inte vacka
+# Neon i onodan - databasen gar i viloläge pa gratisplanen, och varje väckning
+# kostar berakningstid. Behovs snabbare larm: byt "0 * * * *" mot "*/15 * * * *".
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      testlarm:
+        description: "Tvinga fram ett testlarm for att kontrollera att notiser kommer fram"
+        type: boolean
+        default: false
+
+permissions:
+  issues: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pinga produktion
+        id: ping
+        env:
+          TESTLARM: ${{ inputs.testlarm }}
+        run: |
+          # Testlage: kor workflowen manuellt med rutan ikryssad for att
+          # kontrollera att larmet nar hela vagen fram till din inkorg, utan
+          # att vanta pa ett riktigt driftstopp.
+          if [ "$TESTLARM" = "true" ]; then
+            {
+              echo "failed=true"
+              echo "bad_url=TESTLARM - ingen riktig nedtid"
+              echo "bad_code=test"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          urls=(
+            "https://seos-cookie-banner-api.vercel.app/"
+            "https://seos-cookie-banner-api.vercel.app/consent/policy/latest?domain=www.seosdesign.se"
+          )
+          for u in "${urls[@]}"; do
+            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 25 "$u" || echo "000")
+            echo "$u -> $code"
+            if [ "$code" != "200" ]; then
+              {
+                echo "failed=true"
+                echo "bad_url=$u"
+                echo "bad_code=$code"
+              } >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "failed=false" >> "$GITHUB_OUTPUT"
+
+      - name: Oppna eller uppdatera issue vid nedtid
+        if: steps.ping.outputs.failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = "${{ steps.ping.outputs.bad_url }}";
+            const code = "${{ steps.ping.outputs.bad_code }}";
+            const arTest = code === "test";
+
+            const title = arTest
+              ? "🧪 Testlarm: kontroll av notiskedjan"
+              : "🔴 Uptime: consent-API:t svarar inte";
+
+            const body = arTest
+              ? [
+                  "Det har ar **inget driftstopp**. Nagon korde workflowen manuellt med",
+                  "rutan `testlarm` ikryssad for att kontrollera att larm nar fram.",
+                  "",
+                  `- **Tidpunkt:** ${new Date().toISOString()}`,
+                  "",
+                  "Fick du ett mejl om det har issuet fungerar kedjan. Stang issuet.",
+                  "Kom inget mejl: kontrollera att adressen ar verifierad under",
+                  "Settings -> Emails, och att du bevakar repot med Watch -> All Activity.",
+                ].join("\n")
+              : [
+                  "Automatisk uptime-kontroll misslyckades.",
+                  "",
+                  `- **URL:** ${url}`,
+                  `- **Statuskod:** ${code} (000 = ingen kontakt alls)`,
+                  `- **Tidpunkt:** ${new Date().toISOString()}`,
+                  "",
+                  "Bannern pa kundsajterna kan fortfarande visas, men samtycken riskerar",
+                  "att inte loggas. Kontrollera Vercel och Neon.",
+                  "",
+                  "Kors varje timme via `.github/workflows/uptime.yml`.",
+                ].join("\n");
+
+            const oppna = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "uptime",
+            });
+
+            if (oppna.data.length > 0) {
+              // Kommentera i stallet for att oppna nytt, sa ett langre avbrott
+              // inte fyller issue-listan.
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: oppna.data[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["uptime"],
+              });
+            }
