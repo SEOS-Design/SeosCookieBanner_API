@@ -5,6 +5,7 @@ import { consentRoute } from "./routes/consent";
 import { cors } from "hono/cors";
 import { handle } from "hono/vercel";
 import { db } from "./db/client";
+import { normaliseraOrigin } from "./lib/origin";
 
 const app = new Hono();
 
@@ -23,12 +24,6 @@ const app = new Hono();
 // Det gor ocksa overgangen ofarlig: sa lange databaskolumnerna ar tomma beter
 // sig API:t exakt som forut, och sajterna kan fyllas i en i taget.
 
-// En Origin-header har aldrig avslutande snedstreck och jamfors skiftlageslost.
-// Normaliseringen gor att en slarvig rad ("https://exempel.se/") anda matchar.
-function normalisera(origin: string): string {
-  return origin.trim().toLowerCase().replace(/\/+$/, "");
-}
-
 const ENV_ORIGINS = (
   process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(",")
@@ -39,7 +34,7 @@ const ENV_ORIGINS = (
         "https://www.seosdesign.se",
         "https://seosdesign.se",
       ]
-).map(normalisera);
+).map(normaliseraOrigin);
 
 const CACHE_MS = 5 * 60 * 1000;
 let cache: { origins: Set<string>; utgar: number } | null = null;
@@ -59,7 +54,7 @@ async function tillatnaOrigins(): Promise<Set<string>> {
 
     const alla = new Set(ENV_ORIGINS);
     for (const rad of rader) {
-      for (const origin of rad.allowed_origins ?? []) alla.add(normalisera(origin));
+      for (const origin of rad.allowed_origins ?? []) alla.add(normaliseraOrigin(origin));
     }
 
     cache = { origins: alla, utgar: nu + CACHE_MS };
@@ -81,7 +76,7 @@ app.use(
       const tillatna = await tillatnaOrigins();
       // Svaret maste eka exakt den adress webblasaren skickade, inte den
       // normaliserade varianten.
-      return tillatna.has(normalisera(origin)) ? origin : undefined;
+      return tillatna.has(normaliseraOrigin(origin)) ? origin : undefined;
     },
     allowHeaders: ["Content-Type"],
     allowMethods: ["POST", "GET", "OPTIONS"],

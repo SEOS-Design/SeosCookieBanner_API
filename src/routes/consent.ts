@@ -13,6 +13,7 @@ import {
   consentChoice,
   policyVersion,
 } from "../db/schema";
+import { normaliseraOrigin } from "../lib/origin";
 
 const CATEGORY_KEYS = [
   "necessary",
@@ -52,9 +53,16 @@ consentRoute.post("/", consentValidator, async (c) => {
 
     // Origin-kontroll: binder nyckeln till sajtens egna adresser.
     // Tom lista = ingen kontroll (utvecklingslage under uppsattning).
+    //
+    // Jamforelsen normaliseras pa bada sidor, samma satt som CORS-kontrollen i
+    // index.ts. Med rak strangjamforelse hade en databasrad med avslutande
+    // snedstreck eller versal passerat CORS men avvisats har - och felet vore
+    // tyst: besokarens samtycke loggas aldrig, cookien stannar pa en timme och
+    // bannern aterkommer varje timme.
     const origin = c.req.header("origin");
     if (website.allowed_origins.length > 0) {
-      if (!origin || !website.allowed_origins.includes(origin)) {
+      const tillatna = website.allowed_origins.map(normaliseraOrigin);
+      if (!origin || !tillatna.includes(normaliseraOrigin(origin))) {
         return c.json({ message: "Origin not allowed for this site." }, 403);
       }
     }
