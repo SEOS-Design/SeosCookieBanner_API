@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { consentRoute } from "./routes/consent";
 import { cronRoute } from "./routes/cron";
+import { backupRoute } from "./routes/backup";
 import { cors } from "hono/cors";
 import { handle } from "hono/vercel";
 import { db } from "./db/client";
@@ -99,6 +100,7 @@ app.get("/", (c) => c.json({ message: "Backend is working" }));
 
 app.route("/consent", consentRoute);
 app.route("/cron", cronRoute);
+app.route("/cron", backupRoute);
 
 export const GET = handle(app);
 export const POST = handle(app);
