@@ -1,0 +1,127 @@
+/* MALL — kopiera den har filen nar en ny kund ska fa egen formgivning.
+ *
+ *   1. cp design/_mall.css design/<kortnamn>.css
+ *   2. Avkommentera det du vill andra, radera resten
+ *   3. npm run publish-design -- --site=<kortnamn>          (torrkorning)
+ *   4. npm run publish-design -- --site=<kortnamn> --run    (skarpt)
+ *
+ * ⚠️ SKRIV BARA IN DET SOM SKA AVVIKA. Varden som anda ar lika med standarden
+ * ska INTE sta har — da lases sajten fast vid dagens basvarden, och en
+ * framtida basandring nar den aldrig. Har kunden ingen egen formgivning alls
+ * behovs ingen fil (sa kor seosdesign.se).
+ *
+ * Filen _mall.css publiceras aldrig — den matchar ingen sajt.
+ *
+ * Kommentaren efter varje rad ar STANDARDVARDET. Det ar vad du far om raden
+ * lamnas bortkommenterad.
+ */
+
+:root {
+  /* ---------------------------------------------------------------- */
+  /* BAKGRUND OCH TEXT                                                  */
+  /* ---------------------------------------------------------------- */
+
+  /* --bg-main: #0e0e0e; */          /* bannerns bakgrund */
+  /* --text-main: #ffffff; */        /* brodtext och rubrik */
+  /* --text-muted: #9ca3af; */       /* dampad text, t.ex. kategoribeskrivningar */
+  /* --bg-muted: rgba(255,255,255,0.1); */  /* bakgrund pa kategoriraderna */
+
+  /* ⚠️ --text-muted ar den vanligaste kallan till kontrastfel. Kor
+   *    npm run granska -- <adress>  efterat och kontrollera mot bakgrunden.
+   *    Brevenshus forsta varde gav 3,14:1 mot kravet 4,5:1. */
+
+  /* ---------------------------------------------------------------- */
+  /* ACCENT OCH KANTER                                                  */
+  /* ---------------------------------------------------------------- */
+
+  /* --accent-color: #686868; */     /* "Acceptera alla"-knappen och ikonrutan */
+  /* --accent-hover: #6366f1; */     /* accentfargen vid hovring */
+  /* --border-color: rgba(255,255,255,0.2); */  /* bannerns ytterkant */
+  /* --btn-border: rgba(255,255,255,0.5); */    /* knapparnas kant */
+
+  /* ---------------------------------------------------------------- */
+  /* KNAPPAR                                                            */
+  /* ---------------------------------------------------------------- */
+
+  /* --btn-accent-text: #ffffff; */  /* text PA den accentfargade knappen */
+  /* --bg-dark-btn: #111827; */      /* morka knappar */
+  /* --bg-customize-btn: #1d1d1d; */ /* "Anpassa"-knappens bakgrund */
+  /* --btn-hover-filter: brightness(1.2); */       /* ljusning vid hovring */
+  /* --btn-secondary-hover-bg: #1d1d1d; */         /* sekundarknapp vid hovring */
+  /* --btn-secondary-hover-filter: brightness(1.2); */
+
+  /* ⚠️ Pa en LJUS banner ser brightness(1.2) ut som en bugg — knappen bleknar
+   *    i stallet for att morkna. Satt da:
+   *      --btn-secondary-hover-filter: none;
+   *    och lat --btn-secondary-hover-bg gora jobbet i stallet. */
+
+  /* ---------------------------------------------------------------- */
+  /* LOGOTYP OCH REGLAGE                                                */
+  /* ---------------------------------------------------------------- */
+
+  /* --logo-color: #ffffff; */        /* kakikonen */
+  /* --bg-logo-wrapper: #686868; */   /* rutan bakom kakikonen */
+  /* --toggle-switch-bg: #374151; */  /* reglagets bakgrund nar det ar av */
+  /* --toggle-circle: #ffffff; */     /* reglagets knapp */
+
+  /* ---------------------------------------------------------------- */
+  /* TILLGANGLIGHET — las inte over dessa utan att mata kontrasten      */
+  /* ---------------------------------------------------------------- */
+
+  /* --policy-link-color: #ffffff; */ /* lanken till cookiepolicyn */
+  /* --badge-text-color: #ffffff; */  /* texten i "KRAVS"-etiketten */
+  /* --fokus-ring: 2px solid #ffffff; */  /* markering vid tangentbordsnavigering */
+
+  /* ⚠️ En fokusring som inte syns mot bakgrunden ar samma sak som ingen ring.
+   *    Bada de andra hade kontrastfel i var EGEN standarddesign en gang —
+   *    3,46:1 respektive 2,19:1 — sa de ar vard att kontrollera. */
+
+  /* ---------------------------------------------------------------- */
+  /* OVRIGT                                                             */
+  /* ---------------------------------------------------------------- */
+
+  /* --scroll-gradient: none; */      /* toningen i botten av en rullbar ruta.
+                                       * Standarden ar gjord for MORK bakgrund —
+                                       * satt none pa en ljus banner */
+
+  /* ---------------------------------------------------------------- */
+  /* TYPSNITT                                                           */
+  /* ---------------------------------------------------------------- */
+
+  /* Bannern ARVER sidans typsnitt som standard, med flit: den ska smalta in
+   * pa sajten den hamnar pa. Den laddar aldrig egna typsnitt. Satt dessa bara
+   * om du vill LASA utseendet oberoende av sidan omkring. */
+
+  /* --main-font: 'Sajtens brodtextfont', sans-serif; */
+  /* --header-font: 'Sajtens rubrikfont', serif; */   /* utelamnad = samma som --main-font */
+
+  /* ---------------------------------------------------------------- */
+  /* RADIER                                                             */
+  /* ---------------------------------------------------------------- */
+
+  /* --radius-sm: 8px; */    /* reglage och sma element */
+  /* --radius-md: 12px; */   /* knappar och kategorirader */
+  /* --radius-lg: 16px; */   /* sjalva bannerns horn */
+}
+
+/* ==================================================================== */
+/* GAR INTE ATT SATTA HAR — och det ar med flit                          */
+/* ==================================================================== */
+/*
+ * --banner-width          --space-xs / sm / md / lg / xl
+ * --header-text-size      --body-text-size
+ * --badge-text-size       --small-text-size
+ * --icon-container-size   --btn-line-height / --header-line-height
+ *
+ * GEOMETRIN SKA VARA LIKA PA ALLA SAJTER. Bannern ska kannas som samma
+ * komponent overallt men bara kundens uttryck. Skriver du in nagon av dem
+ * sager publiceringen ifran i stallet for att tyst hoppa over den.
+ *
+ * Ser storleken fel ut ska BASVARDET rattas i bannerrepots
+ * banner-src/style.css — da nar andringen alla sajter. Satts vardet per kund
+ * nar framtida basandringar aldrig fram dit det ar overstyrt.
+ *
+ * --icon-path star heller inte med: den innehaller en url(), alltsa ett varde
+ * som far webblasaren att hamta nagot. Ska ikonen bli utbytbar maste adressen
+ * valideras for sig.
+ */

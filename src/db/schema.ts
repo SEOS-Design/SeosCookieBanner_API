@@ -3,6 +3,7 @@ import {
   unique,
   index,
   boolean,
+  jsonb,
   text,
   uuid,
   timestamp,
@@ -21,6 +22,17 @@ export const websites = pgTable("websites", {
   // Tillatna origins for denna sajt (produktion + staging).
   // Tom lista = ingen origin-kontroll (utvecklingslage).
   allowed_origins: text("allowed_origins").array().notNull().default([]),
+  // Sajtens designvarden (C1 steg 1). Nyckel/varde dar nyckeln ar ett
+  // CSS-variabelnamn utan inledande streck: {"bg-main": "#f5f0e6"}.
+  //
+  // jsonb och inte en kolumn per variabel: listan kommer att vaxa, och varje
+  // ny variabel hade annars varit en schemaandring i produktion. Priset ar att
+  // databasen inte validerar innehallet - det gor API:t i stallet, mot en
+  // tillaten lista (se routes/config.ts).
+  //
+  // Tomt objekt = sajten kor bannerns standardvarden. Sa lange kolumnen ar tom
+  // pa alla sajter beter sig allt exakt som fore C1.
+  design: jsonb("design").$type<Record<string, string>>().notNull().default({}),
   created_at: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

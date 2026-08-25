@@ -1,0 +1,64 @@
+/* Brevens hus — bannerns formgivning.
+ *
+ * Publiceras till databasen med:
+ *   npm run publish-design -- --site=brevenshus --kor
+ *
+ * Vardena ar UPPMATTA fran www.brevenshus.se 2026-08-21, inte avskrivna for
+ * hand. Det ar exakt de variabler dar sajten avviker fran bannerns
+ * standardvarden — varken fler eller farre.
+ *
+ * ⚠️ Skriv INTE in varden som redan ar lika med standarden. Da lases sajten
+ * fast vid dagens basvarden, och en framtida basandring nar den aldrig.
+ * Samma fella som att overstyra geometri hos en kund.
+ *
+ * ⚠️ Geometri gar inte att satta har — bredd, textstorlekar, mellanrum och
+ * radhojder ska vara lika pa alla sajter. Publiceringen sager ifran om nagon
+ * forsoker. Ser storleken fel ut ska basvardet i banner-src/style.css rattas.
+ */
+
+:root {
+  /* Bakgrund och text — beige med varmt brunt */
+  --bg-main: #efe1c9;
+  --bg-muted: rgba(89, 74, 60, 0.06);
+  --text-main: #594a3c;
+  --text-muted: #6f6152;
+
+  /* Accent */
+  --accent-color: #594a3c;
+  --accent-hover: #3f342a;
+
+  /* Kanter */
+  --border-color: rgba(89, 74, 60, 0.16);
+  --btn-border: rgba(89, 74, 60, 0.38);
+
+  /* Logotyp och ikonruta */
+  --logo-color: #594a3c;
+  --bg-logo-wrapper: #e5d5b5;
+
+  /* Knappar */
+  --bg-customize-btn: rgba(89, 74, 60, 0.04);
+  --btn-accent-text: #f5f0e8;
+  --btn-secondary-hover-bg: rgba(89, 74, 60, 0.12);
+  /* Ingen ljusning vid hovring — pa en ljus bakgrund ser den ut som en bugg */
+  --btn-secondary-hover-filter: none;
+
+  /* Reglage */
+  --toggle-switch-bg: #d8cdb8;
+  --toggle-circle: #ffffff;
+
+  /* Tillganglighet.
+   *
+   * ⚠️ --text-muted ovan ger 3,14:1 mot bakgrunden och ligger under WCAG:s
+   * krav pa 4,5:1. Uppmatt med `npm run granska` 2026-08-20: fyra fel.
+   * #6f6152 ger 4,64:1 och ar rattelsen — den ligger inne har, men behover
+   * kontrolleras mot sajtens ovriga formgivning. */
+  --fokus-ring: 2px solid #594a3c;
+  --policy-link-color: #594a3c;
+  --badge-text-color: #594a3c;
+
+  /* Ingen toning i rullningslisten — den ar gjord for mork bakgrund */
+  --scroll-gradient: none;
+
+  /* Rundare horn an standard */
+  --radius-md: 24px;
+}

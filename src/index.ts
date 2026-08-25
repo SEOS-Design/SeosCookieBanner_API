@@ -2,6 +2,7 @@ import "dotenv/config";
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { consentRoute } from "./routes/consent";
+import { configRoute } from "./routes/config";
 import { cronRoute } from "./routes/cron";
 import { backupRoute } from "./routes/backup";
 import { cors } from "hono/cors";
@@ -70,19 +71,35 @@ async function tillatnaOrigins(): Promise<Set<string>> {
   }
 }
 
-app.use(
-  "*",
-  cors({
-    origin: async (origin) => {
-      if (!origin) return undefined;
-      const tillatna = await tillatnaOrigins();
-      // Svaret maste eka exakt den adress webblasaren skickade, inte den
-      // normaliserade varianten.
-      return tillatna.has(normaliseraOrigin(origin)) ? origin : undefined;
-    },
-    allowHeaders: ["Content-Type"],
-    allowMethods: ["POST", "GET", "OPTIONS"],
-  }),
+// /config ar UNDANTAGET fran origin-lasningen, med flit. Tva skal:
+//
+// 1. CACHNINGEN. Svaret fran /config cachas pa CDN:et - det ar det som haller
+//    databaslasten platt nar antalet sidvisningar vaxer. Ett CORS-svar beror
+//    pa vilken Origin som fragade, sa ett cachat svar med seosdesigns adress
+//    hade serverats till brevenshus och brutit bannern dar. Ett fast "*"
+//    ar samma for alla och gar darfor att cacha.
+//
+// 2. DET SKYDDAR INGENTING HAR. Origin-lasningen finns for att binda en site
+//    key till sajtens adresser pa SKRIVvagen, sa att ingen kan forfalska
+//    poster i bevisloggen. /config ar lasning av publika designvarden - farger
+//    och typsnitt som redan syns pa kundens sajt. CORS hindrar dessutom bara
+//    webblasare; vem som helst kan hamta adressen med curl anda.
+const oppenKors = cors({ origin: "*", allowMethods: ["GET", "OPTIONS"] });
+
+const lastKors = cors({
+  origin: async (origin) => {
+    if (!origin) return undefined;
+    const tillatna = await tillatnaOrigins();
+    // Svaret maste eka exakt den adress webblasaren skickade, inte den
+    // normaliserade varianten.
+    return tillatna.has(normaliseraOrigin(origin)) ? origin : undefined;
+  },
+  allowHeaders: ["Content-Type"],
+  allowMethods: ["POST", "GET", "OPTIONS"],
+});
+
+app.use("*", async (c, next) =>
+  c.req.path.startsWith("/config") ? oppenKors(c, next) : lastKors(c, next),
 );
 
 // Rate limiting sker i Vercels brandvagg (Firewall -> Custom Rules), inte har.
@@ -99,6 +116,7 @@ app.use(
 app.get("/", (c) => c.json({ message: "Backend is working" }));
 
 app.route("/consent", consentRoute);
+app.route("/config", configRoute);
 app.route("/cron", cronRoute);
 app.route("/cron", backupRoute);
 
