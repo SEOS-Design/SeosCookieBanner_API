@@ -97,6 +97,7 @@ const TILLATNA_VARIABLER = new Set([
   // Tillganglighet - egna variabler sa en sajt kan gora dem synliga mot sin
   // egen bakgrund. En fokusring som inte syns ar samma sak som ingen ring.
   "fokus-ring",
+  "scrollbar-thumb",
   "policy-link-color",
   "badge-text-color",
   // Ovrigt utseende

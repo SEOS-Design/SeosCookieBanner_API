@@ -48,10 +48,11 @@
 
   /* Tillganglighet.
    *
-   * ⚠️ --text-muted ovan ger 3,14:1 mot bakgrunden och ligger under WCAG:s
-   * krav pa 4,5:1. Uppmatt med `npm run granska` 2026-08-20: fyra fel.
-   * #6f6152 ger 4,64:1 och ar rattelsen — den ligger inne har, men behover
-   * kontrolleras mot sajtens ovriga formgivning. */
+   * OBS om --text-muted ovan: vardet #6f6152 AR rattelsen, redan pa plats.
+   * Sajten hade tidigare en ljusare ton som gav 3,14:1 mot bakgrunden, under
+   * WCAG:s krav pa 4,5:1 — fyra fel med npm run granska 2026-08-20. #6f6152
+   * ger 4,64:1. Verifierat uppmatt fran den skarpa sajten 2026-08-21, sa
+   * rattelsen finns bade dar och har. Byt inte tillbaka. */
   --fokus-ring: 2px solid #594a3c;
   --policy-link-color: #594a3c;
   --badge-text-color: #594a3c;

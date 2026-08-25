@@ -65,6 +65,7 @@ const TILLATNA = new Set([
   "btn-secondary-hover-bg",
   "btn-secondary-hover-filter",
   "fokus-ring",
+  "scrollbar-thumb",
   "policy-link-color",
   "badge-text-color",
   "scroll-gradient",

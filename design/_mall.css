@@ -68,6 +68,9 @@
   /* TILLGANGLIGHET — las inte over dessa utan att mata kontrasten      */
   /* ---------------------------------------------------------------- */
 
+  /* --scrollbar-thumb: #9ca3af; */   /* rullningsstapeln i policy- och
+                                       * installningsrutan. Foljer
+                                       * --text-muted som standard */
   /* --policy-link-color: #ffffff; */ /* lanken till cookiepolicyn */
   /* --badge-text-color: #ffffff; */  /* texten i "KRAVS"-etiketten */
   /* --fokus-ring: 2px solid #ffffff; */  /* markering vid tangentbordsnavigering */
