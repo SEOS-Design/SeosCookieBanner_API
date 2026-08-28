@@ -4,12 +4,18 @@ import { db } from "../db/client";
 import { websites } from "../db/schema";
 
 //========================================================================
-// GET /config/:siteKey - sajtens designvarden (C1 steg 1)
+// GET /config/:siteKey - sajtens design och kategorier (C1 steg 1-2)
 //========================================================================
 //
 // Bannern hamtar harifran i stallet for att lasa CSS-variabler ur ett
 // designblock i kundens <head>. Det gor en omdesign till ett databasvarde:
 // ingen kod, ingen deploy, ingen atkomst till kundens sajt.
+//
+// Sedan steg 2 foljer ocksa KATEGORIERNA med - alltsa vilka kort som visas i
+// installningsrutan. En sajt utan funktionella cookies ska inte visa ett
+// reglage for dem (C10). Kategorierna aker med i samma svar med flit: det ar
+// samma cache, samma anrop och samma villkor, sa steget kostar ingen ny
+// trafik och paverkar inte CU-timmarna.
 //
 // DEN HAR ROUTEN AR SPECIELL: den anropas en gang per SIDVISNING, medan
 // /consent anropas en gang per BESOKARE. Det ar den enda hogfrekventa
@@ -51,7 +57,13 @@ const STALE_SEKUNDER = 24 * 60 * 60;
 // Fangar det som anda tar sig forbi CDN:et: revalideringar, flera
 // CDN-noder, och kalla starter tatt inpa varandra.
 const MINNE_MS = 5 * 60 * 1000;
-const minne = new Map<string, { design: Record<string, string>; utgar: number }>();
+
+type Kategori = { key: string; is_required: boolean };
+
+const minne = new Map<
+  string,
+  { design: Record<string, string>; kategorier: Kategori[]; utgar: number }
+>();
 
 // Site keys ser ut som pk_live_<32 hex>. Grans mot orimliga varden innan
 // nagon databasfraga stalls.
@@ -146,6 +158,74 @@ export function rensaDesign(design: unknown): Record<string, string> {
   return rensad;
 }
 
+// VILKA KATEGORIER SOM GAR ATT VISA - och i vilken ordning
+//
+// Listan ar bade en TILLATLISTA och en SORTERING. Tabellen har ingen
+// sorteringskolumn, sa ordningen maste komma harifran.
+//
+// Att den ar en tillatlista ar det viktiga: bannerns etiketter ("Analys och
+// prestanda", "Marknadsforing") ligger i dess EGEN sprakabell, inte i
+// databasen. En kategori vi inte har text for gar darfor inte att rita, och
+// ska heller inte skickas.
+//
+// Foljden ar vard att sagas rakt ut: STEG 2 KAN TA BORT KATEGORIER, INTE
+// LAGGA TILL NYA. En femte kategori kraver texter fran databasen, alltsa
+// steg 3. Det ar en avgransning, inte en brist - C10 handlar om att sluta
+// visa kort som inte betyder nagot.
+//
+// Listan ar med flit en KOPIA av bannerns egen, precis som med
+// designvariablerna. Driver de isar galler snittet: en kategori slutar visas,
+// i stallet for att en okand kategori borjar ritas. Fel at ratt hall.
+const KATEGORIORDNING = [
+  "necessary",
+  "analytics",
+  "functional",
+  "marketing",
+] as const;
+
+/**
+ * Slapper bara igenom kanda, aktiva kategorier - i fast ordning.
+ *
+ * Tom lista betyder "databasen sa ingenting begripligt". Bannern faller da
+ * tillbaka pa sina fyra standardkategorier. En banner utan kategorier vore
+ * ett mycket varre fel an en banner med for manga.
+ */
+export function rensaKategorier(rader: unknown): Kategori[] {
+  if (!Array.isArray(rader)) return [];
+
+  const aktiva = new Map<string, boolean>();
+
+  for (const rad of rader) {
+    if (!rad || typeof rad !== "object") continue;
+    const { key, is_required, is_active } = rad as Record<string, unknown>;
+    if (typeof key !== "string") continue;
+    if (!(KATEGORIORDNING as readonly string[]).includes(key)) continue;
+    // Bara ett uttryckligt false doljer. Saknas kolumnen (t.ex. innan
+    // migreringen korts) visas kategorin - samma no-op som default true.
+    if (is_active === false) continue;
+    aktiva.set(key, is_required === true);
+  }
+
+  if (aktiva.size === 0) return [];
+
+  // NODVANDIGA AR ALLTID MED, OCH ALLTID OBLIGATORISKA.
+  //
+  // Bannern satter sin egen samtyckescookie, sa kategorin ar sann pa varje
+  // sajt - det finns inget lage dar den ar fel att visa. Och payloaden
+  // skickar alltid necessary: true, sa ett reglage som gick att stanga av
+  // hade ljugit for besokaren om vad som faktiskt hander.
+  //
+  // Invarianten ligger har och inte i ett databasvillkor av samma skal som
+  // geometrin avvisas i publish-design: felet ska fangas med en forklaring,
+  // inte tyst falla bort langre fram.
+  aktiva.set("necessary", true);
+
+  return KATEGORIORDNING.filter((key) => aktiva.has(key)).map((key) => ({
+    key,
+    is_required: aktiva.get(key) === true,
+  }));
+}
+
 configRoute.get("/:siteKey", async (c) => {
   const siteKey = c.req.param("siteKey");
 
@@ -180,14 +260,26 @@ configRoute.get("/:siteKey", async (c) => {
     const cachat = minne.get(siteKey);
     if (cachat && cachat.utgar > Date.now()) {
       settCacheHuvud();
-      return c.json({ design: cachat.design });
+      return c.json({ design: cachat.design, categories: cachat.kategorier });
     }
   }
 
   try {
+    // Design och kategorier hamtas i EN fraga, inte tva. Varje anrop som nar
+    // fram till databasen haller Neon vaken i minst fem minuter, sa antalet
+    // fragor spelar mindre roll an antalet uppvakningar - men tva rundturer
+    // dar en racker ar anda dubbelt sa manga tillfallen att vanta pa natet.
     const website = await db.query.websites.findFirst({
       where: eq(websites.site_key, siteKey),
       columns: { design: true },
+      with: {
+        categories: {
+          // description hamtas INTE. Det ar text, och text fran databasen ut
+          // pa kundsajter ar C1 steg 3 - den som bar XSS-ytan. Stegen ska
+          // halla isar, aven nar kolumnen ligger en armlangd bort.
+          columns: { key: true, is_required: true, is_active: true },
+        },
+      },
     });
 
     if (!website) {
@@ -197,12 +289,15 @@ configRoute.get("/:siteKey", async (c) => {
     }
 
     const design = rensaDesign(website.design);
+    const kategorier = rensaKategorier(website.categories);
     // I farsklage skrivs inte minnescachen heller - annars hade nasta vanliga
     // anrop serverats ur ett resultat som hamtades for att kringga cachen.
-    if (!farsk) minne.set(siteKey, { design, utgar: Date.now() + MINNE_MS });
+    if (!farsk) {
+      minne.set(siteKey, { design, kategorier, utgar: Date.now() + MINNE_MS });
+    }
 
     settCacheHuvud();
-    return c.json({ design });
+    return c.json({ design, categories: kategorier });
   } catch (fel) {
     console.error("[config] Kunde inte hamta design:", fel);
     // Bannern faller tillbaka pa sina standardvarden vid fel. Ingen cachning -

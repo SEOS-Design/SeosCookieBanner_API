@@ -69,6 +69,16 @@ export const consentCategory = pgTable(
     key: text("key").notNull(),
     description: text("description"),
     is_required: boolean("is_required").notNull(),
+    // Om kategorin ska visas i bannerns installningsruta (C1 steg 2).
+    //
+    // true som standard: sa lange ingen rad satts till false beter sig allt
+    // exakt som fore steg 2, aven med bade API och banner ute.
+    //
+    // FALSE - ALDRIG DELETE. consent_choice pekar hit med ON DELETE CASCADE,
+    // sa att radera raden raderar varje historiskt val for kategorin. Det ar
+    // bevis, och det gar inte att aterskapa. Se
+    // migrationer/2026-08-28-kategorier-aktiva.sql.
+    is_active: boolean("is_active").notNull().default(true),
   },
   (table) => ({
     siteKeyUnique: unique("site_key_unique").on(table.website_id, table.key),
