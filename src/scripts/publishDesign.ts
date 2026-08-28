@@ -253,9 +253,15 @@ const run = async () => {
 
   console.log(
     "Skrivet till databasen.\n\n" +
-      "Nar det syns: CDN:et cachar svaret i en timme, sa andringen nar besokarna\n" +
-      "inom den tiden. Verifiera pa den RIKTIGA sajten, inte i en testsida -\n" +
-      "bannern hamtar typsnitt, och darmed textbredder, fran sidan omkring sig.\n",
+      "SA HAR SER DU DET:\n" +
+      `  Direkt, for dig    Oppna sajten med ?seos_farsk=1 pa slutet:\n` +
+      `                     https://${sajt.domain}/?seos_farsk=1\n\n` +
+      "  Direkt, for ALLA   Redeploya API:t i Vercel (Deployments -> senaste\n" +
+      "                     -> Redeploy). CDN:et cachar per deployment, sa en ny\n" +
+      "                     deployment gor att gamla sparade svar slutar anvandas.\n\n" +
+      "  Av sig sjalvt      Inom sex timmar. Gor ingenting.\n\n" +
+      "Verifiera pa den RIKTIGA sajten, inte i en testsida - bannern hamtar\n" +
+      "typsnitt, och darmed textbredder, fran sidan omkring sig.\n",
   );
   process.exit(0);
 };

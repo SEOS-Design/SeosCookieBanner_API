@@ -39,11 +39,39 @@ export const configRoute = new Hono();
 //
 // Med en timme blir C1 billigare an uptime-kontrollen redan ar.
 //
-// Priset: en designandring nar besokarna efter upp till en timme. For farger
-// ar det rimligt. Behovs det snabbare finns tva vagar: kortare varde har, i
-// utbyte mot berakningstid, eller att cachen rensas vid skrivning (naturlig
-// del av D4, admin-granssnittet).
-const CDN_CACHE_SEKUNDER = 60 * 60;
+// ---------------------------------------------------------------------------
+// RATTELSE 2026-08-28: en timme rackte inte. Hojd till SEX.
+// ---------------------------------------------------------------------------
+//
+// Utrakningen ovan holl inte, men felet lag inte i cachen - den fungerar.
+// Uppmatt: forbrukningen gick fran 0,81 till 5,91 CU-timmar per dygn de tre
+// dygnen efter att C1 steg 1 gick i drift. Taket ar 100 i manaden, sa i den
+// takten hade september slagit i det.
+//
+// Vad matningen visade:
+//   - CDN:et haller svaret hela timmen ut. Age klattrade 349 -> 1505 sekunder
+//     over 20 minuter utan en enda ny hamtning. Cachen ar alltsa inte trasig.
+//   - Databasen vaknade anda ungefar var trettonde minut.
+//
+// Forklaringen: Neon stannar vaken MINST FEM MINUTER per uppvakning, oavsett
+// om den far en fraga eller tusen. Kostnaden styrs alltsa av hur OFTA den
+// vacks, inte av hur mycket den gor. Och det som vacker den ar att cachen gar
+// ut - separat pa varje plats i CDN:et. Med en handfull aktiva platser blir
+// det ett uppvaknande var trettonde minut, precis som uppmatt.
+//
+// Darfor sitter spaken har: sex timmar i stallet for en ger en sjattedel sa
+// manga uppvakningar. Beraknad landning ~50 CU-timmar i manaden - berakningen
+// ska stammas av mot verkligt utfall innan den tros pa.
+//
+// Priset: en designandring nar besokarna efter upp till sex timmar i stallet
+// for en. Tva nodutgangar finns, och ingen kostar nagot:
+//   - ?seos_farsk=1 gar forbi bada cacherna for den som kontrollerar
+//   - en redeploy av API:t tomer CDN-cachen direkt for alla besokare
+// Den andra skrivs ut av publish-design och star i driftmanualen avsnitt 13.
+//
+// Besokaren vantar aldrig langre an idag: stale-while-revalidate nedan gor att
+// CDN:et serverar det gamla svaret direkt och hamtar nytt i bakgrunden.
+const CDN_CACHE_SEKUNDER = 60 * 60 * 6;
 // Under revalidering far CDN:et servera det gamla svaret. Ett dygn: hellre
 // gammal design an ingen design, och en langsam databas ska aldrig bli en
 // langsam banner for besokaren.
