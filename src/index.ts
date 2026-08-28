@@ -8,7 +8,7 @@ import { backupRoute } from "./routes/backup";
 import { cors } from "hono/cors";
 import { handle } from "hono/vercel";
 import { db } from "./db/client";
-import { normaliseraOrigin } from "./lib/origin";
+import { normalizeOrigin } from "./lib/origin";
 
 const app = new Hono();
 
@@ -37,7 +37,7 @@ const ENV_ORIGINS = (
         "https://www.seosdesign.se",
         "https://seosdesign.se",
       ]
-).map(normaliseraOrigin);
+).map(normalizeOrigin);
 
 const CACHE_MS = 5 * 60 * 1000;
 let cache: { origins: Set<string>; utgar: number } | null = null;
@@ -57,7 +57,7 @@ async function tillatnaOrigins(): Promise<Set<string>> {
 
     const alla = new Set(ENV_ORIGINS);
     for (const rad of rader) {
-      for (const origin of rad.allowed_origins ?? []) alla.add(normaliseraOrigin(origin));
+      for (const origin of rad.allowed_origins ?? []) alla.add(normalizeOrigin(origin));
     }
 
     cache = { origins: alla, utgar: nu + CACHE_MS };
@@ -92,7 +92,7 @@ const lastKors = cors({
     const tillatna = await tillatnaOrigins();
     // Svaret maste eka exakt den adress webblasaren skickade, inte den
     // normaliserade varianten.
-    return tillatna.has(normaliseraOrigin(origin)) ? origin : undefined;
+    return tillatna.has(normalizeOrigin(origin)) ? origin : undefined;
   },
   allowHeaders: ["Content-Type"],
   allowMethods: ["POST", "GET", "OPTIONS"],

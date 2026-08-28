@@ -12,6 +12,6 @@
  * felet vore tyst: samtycket loggas aldrig och bannern aterkommer hos
  * besokaren varje timme.
  */
-export function normaliseraOrigin(origin: string): string {
+export function normalizeOrigin(origin: string): string {
   return origin.trim().toLowerCase().replace(/\/+$/, "");
 }

@@ -29,7 +29,7 @@ export const backupRoute = new Hono();
 /** Beslut 2026-08-18: kopior behalls 30 dagar. Maste vara KORTARE an
  *  gallringstiden pa 12 manader, annars ligger raderad data kvar i kopiorna
  *  och gallringen ar ett tomt lofte. */
-const BEHALL_DAGAR = 30;
+const KEEP_DAYS = 30;
 
 const PREFIX = "backup/";
 
@@ -37,7 +37,7 @@ const PREFIX = "backup/";
  * Tabellerna i den ordning de maste aterstallas - foreign keys pekar bakat.
  * Andras ordningen gar en aterstallning inte att genomfora.
  */
-const TABELLER = [
+const TABLES = [
   "websites",
   "consent_category",
   "policy_version",
@@ -62,7 +62,7 @@ backupRoute.get("/backup", async (c) => {
     const tabeller: Record<string, unknown[]> = {};
     const antal: Record<string, number> = {};
 
-    for (const tabell of TABELLER) {
+    for (const tabell of TABLES) {
       const rader = await db.execute(sql`SELECT * FROM ${sql.identifier(tabell)}`);
       tabeller[tabell] = rader.rows;
       antal[tabell] = rader.rows.length;
@@ -83,7 +83,7 @@ backupRoute.get("/backup", async (c) => {
         JSON.stringify({
           skapad: new Date().toISOString(),
           format: 1,
-          aterstallningsordning: TABELLER,
+          aterstallningsordning: TABLES,
           antal,
           tabeller,
         }),
@@ -104,7 +104,7 @@ backupRoute.get("/backup", async (c) => {
     });
 
     // Gallra gamla kopior. Radering ar gratis hos Blob.
-    const granse = Date.now() - BEHALL_DAGAR * 24 * 60 * 60 * 1000;
+    const granse = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;
     const { blobs } = await list({ prefix: PREFIX });
     const gamla = blobs.filter((b) => new Date(b.uploadedAt).getTime() < granse);
     if (gamla.length > 0) await del(gamla.map((b) => b.url));

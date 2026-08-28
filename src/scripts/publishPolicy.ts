@@ -30,7 +30,7 @@ const harFlagga = (namn: string): boolean =>
 const kortNamn = (domain: string): string =>
   domain.replace(/^www\./, "").split(".")[0]!;
 
-const hittaFil = (domain: string, version: string) => {
+const findFile = (domain: string, version: string) => {
   const eget = join("policies", kortNamn(domain), `${version}.html`);
   if (existsSync(eget)) return { sokvag: eget, egen: true };
   const bas = join("policies", "base", `${version}.html`);
@@ -73,7 +73,7 @@ const run = async () => {
   let hoppade = 0;
 
   for (const s of malsajter) {
-    const fil = hittaFil(s.domain, version);
+    const fil = findFile(s.domain, version);
 
     if (!fil) {
       console.log(`  HOPPAR  ${s.domain}`);

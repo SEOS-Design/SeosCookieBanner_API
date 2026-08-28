@@ -42,10 +42,10 @@ import { websites } from "../db/schema";
 // ska kannas som samma komponent overallt men bara kundens uttryck.
 //
 // Listan ar med flit densamma som i routes/config.ts och i bannerns
-// DESIGNVARIABLER. Att den star har OCKSA ar poangen med det har skriptet:
+// DESIGN_VARIABLES. Att den star har OCKSA ar poangen med det har skriptet:
 // felet upptacks nar du publicerar, med ett tydligt meddelande - i stallet
 // for att vardet tyst faller bort nagonstans langre fram.
-const TILLATNA = new Set([
+const ALLOWED = new Set([
   "bg-main",
   "bg-muted",
   "text-main",
@@ -78,7 +78,7 @@ const TILLATNA = new Set([
 
 // Geometri namns sarskilt for att felmeddelandet ska kunna forklara VARFOR,
 // i stallet for att bara saga "okand variabel".
-const GEOMETRI = new Set([
+const GEOMETRY = new Set([
   "banner-width",
   "header-text-size",
   "body-text-size",
@@ -94,10 +94,10 @@ const GEOMETRI = new Set([
   "header-line-height",
 ]);
 
-const MAX_VARDELANGD = 200;
+const MAX_VALUE_LENGTH = 200;
 // Samma sparr som i API:t: ett CSS-varde med url() far webblasaren att hamta
 // nagot fran en adress vi inte valt.
-const FARLIGT = /url\(|expression\(|javascript:|@import|[<>{}\\;]/i;
+const UNSAFE_VALUE = /url\(|expression\(|javascript:|@import|[<>{}\\;]/i;
 
 const arg = (namn: string): string | undefined =>
   process.argv.find((a) => a.startsWith(`--${namn}=`))?.split("=").slice(1).join("=");
@@ -110,7 +110,7 @@ const kortNamn = (domain: string): string => domain.replace(/^www\./, "").split(
  * Plockar ut CSS-variabler ur en fil. Medvetet enkelt: allt utom
  * `--namn: varde;` ignoreras. Kommentarer tas bort forst.
  */
-export function lasVariabler(css: string): Record<string, string> {
+export function parseVariables(css: string): Record<string, string> {
   const utanKommentarer = css.replace(/\/\*[\s\S]*?\*\//g, "");
   const funna: Record<string, string> = {};
 
@@ -183,12 +183,12 @@ const run = async () => {
     process.exit(1);
   }
 
-  const funna = lasVariabler(readFileSync(sokvag, "utf8"));
+  const funna = parseVariables(readFileSync(sokvag, "utf8"));
   const design: Record<string, string> = {};
   const problem: string[] = [];
 
   for (const [namn, varde] of Object.entries(funna)) {
-    if (GEOMETRI.has(namn)) {
+    if (GEOMETRY.has(namn)) {
       problem.push(
         `  --${namn}: geometri gar inte att satta per sajt.\n` +
           `      Bannern ska kannas som samma komponent pa alla sajter. Ser storleken\n` +
@@ -197,15 +197,15 @@ const run = async () => {
       );
       continue;
     }
-    if (!TILLATNA.has(namn)) {
+    if (!ALLOWED.has(namn)) {
       problem.push(`  --${namn}: okand variabel, hoppas over.`);
       continue;
     }
-    if (varde.length > MAX_VARDELANGD) {
-      problem.push(`  --${namn}: vardet ar langre an ${MAX_VARDELANGD} tecken.`);
+    if (varde.length > MAX_VALUE_LENGTH) {
+      problem.push(`  --${namn}: vardet ar langre an ${MAX_VALUE_LENGTH} tecken.`);
       continue;
     }
-    if (FARLIGT.test(varde)) {
+    if (UNSAFE_VALUE.test(varde)) {
       problem.push(
         `  --${namn}: vardet innehaller url() eller liknande. Ett CSS-varde som\n` +
           `      hamtar nagot fran en adress vi inte valt ar en vag att spara besokare.`,
@@ -267,7 +267,7 @@ const run = async () => {
 };
 
 // Kor bara nar filen startas direkt. Utan den har vakten oppnar en import av
-// lasVariabler() en databasanslutning och kor hela publiceringen - vilket gor
+// parseVariables() en databasanslutning och kor hela publiceringen - vilket gor
 // tolken omojlig att testa separat.
 if (require.main === module) {
   run().catch((fel) => {

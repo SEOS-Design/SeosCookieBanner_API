@@ -13,7 +13,7 @@ import {
   consentChoice,
   policyVersion,
 } from "../db/schema";
-import { normaliseraOrigin } from "../lib/origin";
+import { normalizeOrigin } from "../lib/origin";
 
 const CATEGORY_KEYS = [
   "necessary",
@@ -61,8 +61,8 @@ consentRoute.post("/", consentValidator, async (c) => {
     // bannern aterkommer varje timme.
     const origin = c.req.header("origin");
     if (website.allowed_origins.length > 0) {
-      const tillatna = website.allowed_origins.map(normaliseraOrigin);
-      if (!origin || !tillatna.includes(normaliseraOrigin(origin))) {
+      const tillatna = website.allowed_origins.map(normalizeOrigin);
+      if (!origin || !tillatna.includes(normalizeOrigin(origin))) {
         return c.json({ message: "Origin not allowed for this site." }, 403);
       }
     }

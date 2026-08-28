@@ -71,11 +71,11 @@ export const configRoute = new Hono();
 //
 // Besokaren vantar aldrig langre an idag: stale-while-revalidate nedan gor att
 // CDN:et serverar det gamla svaret direkt och hamtar nytt i bakgrunden.
-const CDN_CACHE_SEKUNDER = 60 * 60 * 6;
+const CDN_CACHE_SECONDS = 60 * 60 * 6;
 // Under revalidering far CDN:et servera det gamla svaret. Ett dygn: hellre
 // gammal design an ingen design, och en langsam databas ska aldrig bli en
 // langsam banner for besokaren.
-const STALE_SEKUNDER = 24 * 60 * 60;
+const STALE_SECONDS = 24 * 60 * 60;
 
 // Cache i funktionens minne, ovanpa CDN-cachen. Samma monster och samma
 // motivering som origin-listan i index.ts: pa serverless ar en kall cache
@@ -84,19 +84,19 @@ const STALE_SEKUNDER = 24 * 60 * 60;
 //
 // Fangar det som anda tar sig forbi CDN:et: revalideringar, flera
 // CDN-noder, och kalla starter tatt inpa varandra.
-const MINNE_MS = 5 * 60 * 1000;
+const MEMORY_TTL_MS = 5 * 60 * 1000;
 
-type Kategori = { key: string; is_required: boolean };
+type Category = { key: string; is_required: boolean };
 
 const minne = new Map<
   string,
-  { design: Record<string, string>; kategorier: Kategori[]; utgar: number }
+  { design: Record<string, string>; kategorier: Category[]; utgar: number }
 >();
 
 // Site keys ser ut som pk_live_<32 hex>. Grans mot orimliga varden innan
 // nagon databasfraga stalls.
-const MAX_NYCKELLANGD = 100;
-const MAX_VARDELANGD = 200;
+const MAX_KEY_LENGTH = 100;
+const MAX_VALUE_LENGTH = 200;
 
 // VILKA VARIABLER SOM FAR SATTAS FRAN DATABASEN
 //
@@ -113,7 +113,7 @@ const MAX_VARDELANGD = 200;
 // --icon-path star heller inte med: den innehaller en url(), alltso ett varde
 // som far webblasaren att hamta nagot. Vill vi gora ikonen konfigurerbar ska
 // adressen valideras for sig.
-const TILLATNA_VARIABLER = new Set([
+const ALLOWED_VARIABLES = new Set([
   // Farger
   "bg-main",
   "bg-muted",
@@ -162,25 +162,25 @@ const TILLATNA_VARIABLER = new Set([
 // Angriparen har skulle behova skrivratt i var databas, alltsa vara oss.
 // Kontrollen ar darfor djupforsvar, inte huvudskydd - men den ar billig, och
 // den ar det som gor ett framtida admin-granssnitt (D4) ofarligt att bygga.
-const FARLIGT = /url\(|expression\(|javascript:|@import|[<>{}\\;]/i;
+const UNSAFE_VALUE = /url\(|expression\(|javascript:|@import|[<>{}\\;]/i;
 
-function giltigtVarde(varde: unknown): varde is string {
+function isValidValue(varde: unknown): varde is string {
   return (
     typeof varde === "string" &&
     varde.length > 0 &&
-    varde.length <= MAX_VARDELANGD &&
-    !FARLIGT.test(varde)
+    varde.length <= MAX_VALUE_LENGTH &&
+    !UNSAFE_VALUE.test(varde)
   );
 }
 
 /** Slapper bara igenom kanda variabler med rimliga varden. */
-export function rensaDesign(design: unknown): Record<string, string> {
+export function sanitizeDesign(design: unknown): Record<string, string> {
   if (!design || typeof design !== "object" || Array.isArray(design)) return {};
 
   const rensad: Record<string, string> = {};
   for (const [nyckel, varde] of Object.entries(design as Record<string, unknown>)) {
-    if (!TILLATNA_VARIABLER.has(nyckel)) continue;
-    if (!giltigtVarde(varde)) continue;
+    if (!ALLOWED_VARIABLES.has(nyckel)) continue;
+    if (!isValidValue(varde)) continue;
     rensad[nyckel] = varde;
   }
   return rensad;
@@ -204,7 +204,7 @@ export function rensaDesign(design: unknown): Record<string, string> {
 // Listan ar med flit en KOPIA av bannerns egen, precis som med
 // designvariablerna. Driver de isar galler snittet: en kategori slutar visas,
 // i stallet for att en okand kategori borjar ritas. Fel at ratt hall.
-const KATEGORIORDNING = [
+const CATEGORY_ORDER = [
   "necessary",
   "analytics",
   "functional",
@@ -218,7 +218,7 @@ const KATEGORIORDNING = [
  * tillbaka pa sina fyra standardkategorier. En banner utan kategorier vore
  * ett mycket varre fel an en banner med for manga.
  */
-export function rensaKategorier(rader: unknown): Kategori[] {
+export function sanitizeCategories(rader: unknown): Category[] {
   if (!Array.isArray(rader)) return [];
 
   const aktiva = new Map<string, boolean>();
@@ -227,7 +227,7 @@ export function rensaKategorier(rader: unknown): Kategori[] {
     if (!rad || typeof rad !== "object") continue;
     const { key, is_required, is_active } = rad as Record<string, unknown>;
     if (typeof key !== "string") continue;
-    if (!(KATEGORIORDNING as readonly string[]).includes(key)) continue;
+    if (!(CATEGORY_ORDER as readonly string[]).includes(key)) continue;
     // Bara ett uttryckligt false doljer. Saknas kolumnen (t.ex. innan
     // migreringen korts) visas kategorin - samma no-op som default true.
     if (is_active === false) continue;
@@ -248,7 +248,7 @@ export function rensaKategorier(rader: unknown): Kategori[] {
   // inte tyst falla bort langre fram.
   aktiva.set("necessary", true);
 
-  return KATEGORIORDNING.filter((key) => aktiva.has(key)).map((key) => ({
+  return CATEGORY_ORDER.filter((key) => aktiva.has(key)).map((key) => ({
     key,
     is_required: aktiva.get(key) === true,
   }));
@@ -257,19 +257,19 @@ export function rensaKategorier(rader: unknown): Kategori[] {
 configRoute.get("/:siteKey", async (c) => {
   const siteKey = c.req.param("siteKey");
 
-  if (!siteKey || siteKey.length > MAX_NYCKELLANGD) {
+  if (!siteKey || siteKey.length > MAX_KEY_LENGTH) {
     return c.json({ message: "Invalid site key." }, 400);
   }
 
   // Cachas pa CDN:et, INTE i besokarens webblasare (max-age=0). Da nar en
   // rattelse alla besokare vid nasta sidladdning sa fort CDN:et uppdaterats,
   // i stallet for att ligga kvar i enskilda webblasare i en timme till.
-  const settCacheHuvud = () =>
+  const setCacheHeaders = () =>
     c.header(
       "Cache-Control",
       c.req.query("farsk") !== undefined
         ? "no-store"
-        : `public, max-age=0, s-maxage=${CDN_CACHE_SEKUNDER}, stale-while-revalidate=${STALE_SEKUNDER}`,
+        : `public, max-age=0, s-maxage=${CDN_CACHE_SECONDS}, stale-while-revalidate=${STALE_SECONDS}`,
     );
 
   // FARSKLAGE. Bannern lagger till ?farsk=<tidsstampel> nar nagon oppnat
@@ -287,7 +287,7 @@ configRoute.get("/:siteKey", async (c) => {
   if (!farsk) {
     const cachat = minne.get(siteKey);
     if (cachat && cachat.utgar > Date.now()) {
-      settCacheHuvud();
+      setCacheHeaders();
       return c.json({ design: cachat.design, categories: cachat.kategorier });
     }
   }
@@ -316,15 +316,15 @@ configRoute.get("/:siteKey", async (c) => {
       return c.json({ message: "Invalid site key." }, 404);
     }
 
-    const design = rensaDesign(website.design);
-    const kategorier = rensaKategorier(website.categories);
+    const design = sanitizeDesign(website.design);
+    const kategorier = sanitizeCategories(website.categories);
     // I farsklage skrivs inte minnescachen heller - annars hade nasta vanliga
     // anrop serverats ur ett resultat som hamtades for att kringga cachen.
     if (!farsk) {
-      minne.set(siteKey, { design, kategorier, utgar: Date.now() + MINNE_MS });
+      minne.set(siteKey, { design, kategorier, utgar: Date.now() + MEMORY_TTL_MS });
     }
 
-    settCacheHuvud();
+    setCacheHeaders();
     return c.json({ design, categories: kategorier });
   } catch (fel) {
     console.error("[config] Kunde inte hamta design:", fel);

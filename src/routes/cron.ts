@@ -17,7 +17,7 @@ export const cronRoute = new Hono();
  *
  * Kors av Vercel Cron en gang per dygn (Hobby tillater inte tatare).
  */
-const GALLRINGSTID = "12 months";
+const RETENTION_PERIOD = "12 months";
 
 /**
  * Sakerhetssparr. Ett jobb vars enda uppgift ar att radera maste vagra gora
@@ -28,7 +28,7 @@ const GALLRINGSTID = "12 months";
  * raderna per korning. Traffas den har gransen ar nagot fel, och da ar ratt
  * beteende att avbryta och larma - inte att fortsatta.
  */
-const MAX_ANDEL = 0.5;
+const MAX_SHARE = 0.5;
 
 type Resultat = {
   torrkorning: boolean;
@@ -61,7 +61,7 @@ cronRoute.get("/gallra", async (c) => {
     );
     const attGallraRad = await db.execute<{ n: number }>(
       sql`SELECT count(*)::int AS n FROM consent_event
-          WHERE created_at < now() - ${sql.raw(`interval '${GALLRINGSTID}'`)}`,
+          WHERE created_at < now() - ${sql.raw(`interval '${RETENTION_PERIOD}'`)}`,
     );
 
     const totalt = Number(totaltRad.rows[0]?.n ?? 0);
@@ -69,7 +69,7 @@ cronRoute.get("/gallra", async (c) => {
 
     const resultat: Resultat = {
       torrkorning,
-      gallringstid: GALLRINGSTID,
+      gallringstid: RETENTION_PERIOD,
       raderDessforinnan: totalt,
       raderAttGallra: attGallra,
       raderadeEvents: 0,
@@ -81,8 +81,8 @@ cronRoute.get("/gallra", async (c) => {
       return c.json(resultat);
     }
 
-    if (totalt > 0 && attGallra / totalt > MAX_ANDEL) {
-      resultat.avbruten = `Skulle radera ${attGallra} av ${totalt} rader (over ${MAX_ANDEL * 100} %). Avbryter - kontrollera gallringstiden.`;
+    if (totalt > 0 && attGallra / totalt > MAX_SHARE) {
+      resultat.avbruten = `Skulle radera ${attGallra} av ${totalt} rader (over ${MAX_SHARE * 100} %). Avbryter - kontrollera gallringstiden.`;
       console.error("[Gallring] AVBRUTEN:", resultat.avbruten);
       return c.json(resultat, 500);
     }
@@ -95,7 +95,7 @@ cronRoute.get("/gallra", async (c) => {
     // consent_choice foljer med via ON DELETE CASCADE.
     const events = await db.execute(
       sql`DELETE FROM consent_event
-          WHERE created_at < now() - ${sql.raw(`interval '${GALLRINGSTID}'`)}`,
+          WHERE created_at < now() - ${sql.raw(`interval '${RETENTION_PERIOD}'`)}`,
     );
 
     // Identiteter utan kvarvarande handelser fyller ingen funktion langre.
