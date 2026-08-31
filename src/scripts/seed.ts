@@ -147,8 +147,14 @@ const seed = async () => {
       `<script src="https://seos-cookie-banner.vercel.app/js/script.js"\n` +
         `        data-site-key="${klar?.site_key ?? ""}" async></script>`,
     );
-    console.log("\nGlom inte: lagg till sajtens adress i ALLOWED_ORIGINS i Vercel");
-    console.log("och redeploya API:t.");
+    console.log(
+      "\n⚠️ FOR EN NY KUNDSAJT: anvand `npm run onboard` i stallet for det har\n" +
+        "skriptet. Den satter aven allowed_origins, skapar designfilen och skriver\n" +
+        "ut allt som inte gar att automatisera. seed ar kvar for lokal utveckling.\n\n" +
+        "(Har stod tidigare att adressen skulle laggas i ALLOWED_ORIGINS i Vercel.\n" +
+        "Det gallde fore B2 och ar inaktuellt - adresserna ligger i databasens\n" +
+        "websites.allowed_origins numera.)",
+    );
     console.log("----------------------------------------------------------\n");
   } catch (error) {
     console.error("seeding failed:", error);
