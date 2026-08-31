@@ -86,7 +86,14 @@ const STALE_SECONDS = 24 * 60 * 60;
 // CDN-noder, och kalla starter tatt inpa varandra.
 const MEMORY_TTL_MS = 5 * 60 * 1000;
 
-type Category = { key: string; is_required: boolean };
+type Category = {
+  key: string;
+  is_required: boolean;
+  // "toggle" = kort med reglage. "notice" = kort med besked om att sajten
+  // inte anvander kategorin. Kortet visas i BADA fallen - kategorinamnet
+  // forsvinner aldrig.
+  visibility: "toggle" | "notice";
+};
 
 const minne = new Map<
   string,
@@ -201,6 +208,20 @@ export function sanitizeDesign(design: unknown): Record<string, string> {
 // steg 3. Det ar en avgransning, inte en brist - C10 handlar om att sluta
 // visa kort som inte betyder nagot.
 //
+// BESKEDSLAGET (2026-08-31): en kategori som sajten inte anvander DOLJS INTE.
+// Den visas som ett kort utan reglage, med texten "Den har webbplatsen
+// anvander inga marknadsforingscookies".
+//
+// Bjorns beslut, och det ar battre an att dolja: en avstangd knapp som inte
+// styr nagot gor rutan mindre trovardig, men ett besked om att vi INTE sparar
+// for annonser ar en utsaga i stallet for en fraga. Det bygger fortroende i
+// stallet for att bara ta bort brus.
+//
+// ⚠️ Priset ar att ett fel blir ett FALSKT PASTAENDE till besokaren, inte bara
+// en dod knapp. Anvands beskedslaget hos en extern kund maste C12:s larm finnas
+// - annars kan bannern pasta att sajten inte anvander marknadsforingscookies
+// dagen efter att nagon lagt in en pixel.
+//
 // Listan ar med flit en KOPIA av bannerns egen, precis som med
 // designvariablerna. Driver de isar galler snittet: en kategori slutar visas,
 // i stallet for att en okand kategori borjar ritas. Fel at ratt hall.
@@ -212,46 +233,56 @@ const CATEGORY_ORDER = [
 ] as const;
 
 /**
- * Slapper bara igenom kanda, aktiva kategorier - i fast ordning.
+ * Slapper bara igenom kanda kategorier - i fast ordning, med hur var och en
+ * ska visas.
+ *
+ *   visibility: "toggle"  sajten anvander kategorin -> kort med reglage
+ *   visibility: "notice"  sajten anvander den inte  -> kort med besked
  *
  * Tom lista betyder "databasen sa ingenting begripligt". Bannern faller da
- * tillbaka pa sina fyra standardkategorier. En banner utan kategorier vore
- * ett mycket varre fel an en banner med for manga.
+ * tillbaka pa sina fyra standardkategorier, alla som reglage. En banner utan
+ * kategorier vore ett mycket varre fel an en banner med for manga.
  */
 export function sanitizeCategories(rader: unknown): Category[] {
   if (!Array.isArray(rader)) return [];
 
-  const aktiva = new Map<string, boolean>();
+  const funna = new Map<string, { is_required: boolean; anvands: boolean }>();
 
   for (const rad of rader) {
     if (!rad || typeof rad !== "object") continue;
     const { key, is_required, is_active } = rad as Record<string, unknown>;
     if (typeof key !== "string") continue;
     if (!(CATEGORY_ORDER as readonly string[]).includes(key)) continue;
-    // Bara ett uttryckligt false doljer. Saknas kolumnen (t.ex. innan
-    // migreringen korts) visas kategorin - samma no-op som default true.
-    if (is_active === false) continue;
-    aktiva.set(key, is_required === true);
+    // Bara ett uttryckligt false ger besked. Saknas kolumnen visas reglaget -
+    // det sakra fallet ar att FRAGA, inte att pasta nagot om sajten.
+    funna.set(key, {
+      is_required: is_required === true,
+      anvands: is_active !== false,
+    });
   }
 
-  if (aktiva.size === 0) return [];
+  if (funna.size === 0) return [];
 
-  // NODVANDIGA AR ALLTID MED, OCH ALLTID OBLIGATORISKA.
+  // NODVANDIGA AR ALLTID MED, ALLTID OBLIGATORISKA OCH ALLTID ETT REGLAGE.
   //
   // Bannern satter sin egen samtyckescookie, sa kategorin ar sann pa varje
-  // sajt - det finns inget lage dar den ar fel att visa. Och payloaden
-  // skickar alltid necessary: true, sa ett reglage som gick att stanga av
-  // hade ljugit for besokaren om vad som faktiskt hander.
+  // sajt - det finns inget lage dar ett besked om motsatsen vore sant. Och
+  // payloaden skickar alltid necessary: true, sa ett reglage som gick att
+  // stanga av hade ljugit for besokaren om vad som faktiskt hander.
   //
   // Invarianten ligger har och inte i ett databasvillkor av samma skal som
   // geometrin avvisas i publish-design: felet ska fangas med en forklaring,
   // inte tyst falla bort langre fram.
-  aktiva.set("necessary", true);
+  funna.set("necessary", { is_required: true, anvands: true });
 
-  return CATEGORY_ORDER.filter((key) => aktiva.has(key)).map((key) => ({
-    key,
-    is_required: aktiva.get(key) === true,
-  }));
+  return CATEGORY_ORDER.filter((key) => funna.has(key)).map((key) => {
+    const rad = funna.get(key)!;
+    return {
+      key,
+      is_required: rad.is_required,
+      visibility: rad.anvands ? ("toggle" as const) : ("notice" as const),
+    };
+  });
 }
 
 configRoute.get("/:siteKey", async (c) => {
