@@ -95,9 +95,19 @@ type Category = {
   visibility: "toggle" | "notice";
 };
 
+// Sajtens egna texter, nycklade på språk -> kategori -> fält. Formen är
+// medvetet densamma som i databasen, så att det inte finns någon översättning
+// där ett fel kan smyga sig in.
+type Texts = Record<string, Record<string, Record<string, string>>>;
+
 const minne = new Map<
   string,
-  { design: Record<string, string>; kategorier: Category[]; utgar: number }
+  {
+    design: Record<string, string>;
+    kategorier: Category[];
+    texter: Texts;
+    utgar: number;
+  }
 >();
 
 // Site keys ser ut som pk_live_<32 hex>. Grans mot orimliga varden innan
@@ -285,6 +295,89 @@ export function sanitizeCategories(rader: unknown): Category[] {
   });
 }
 
+// TEXTER FRÅN DATABASEN (C1 steg 3)
+//
+// Bannern har egna texter för allt. Det här fältet SKRIVER ÖVER dem, nyckel
+// för nyckel — det ersätter dem inte. Ett fält som saknas, ett språk som inte
+// är ifyllt, eller ett tomt objekt betyder alltså "använd bannerns egen text".
+//
+// Felriktningen är hela poängen: går configen inte fram ritar bannern ändå en
+// komplett ruta. Med databasen som enda källa hade samma situation gett en
+// banner utan ord.
+//
+// ⚠️ REN TEXT, ALDRIG HTML. Bannern skriver de här värdena med textContent, så
+// de kan inte bli kod — det är skälet till att steg 3 inte öppnar någon
+// XSS-yta. Kontrollen nedan är djupförsvar ovanpå det, samma roll som
+// UNSAFE_VALUE har för designen.
+//
+// Att API:t slänger tyst är med flit: här är sista linjen, inte den där en
+// människa ska få veta något. Förklaringen hör hemma i publiceringskommandot,
+// av samma skäl som geometrin avvisas med ett meddelande i publish-design.
+
+// Bannerns språktabell har exakt de här två. Ett språk vi inte kan rita en
+// komplett banner på ska inte gå att fylla i halvvägs.
+const ALLOWED_LANGUAGES = new Set(["sv", "en"]);
+
+// De tre raderna ett kategorikort består av:
+//   label        rubriken
+//   description  texten under rubriken när kategorin ANVÄNDS
+//   notice       texten under rubriken när sajten INTE använder den
+const ALLOWED_TEXT_FIELDS = new Set(["label", "description", "notice"]);
+
+// Texterna är meningar, inte CSS-värden, så gränsen är generösare än
+// MAX_VALUE_LENGTH. Den finns för att en trasig rad inte ska kunna göra
+// config-svaret stort — inte för att styra formgivningen.
+const MAX_TEXT_LENGTH = 300;
+
+// Vinkelparenteser räcker: allt annat som gör HTML farligt behöver dem.
+const UNSAFE_TEXT = /[<>]/;
+
+function isValidText(varde: unknown): varde is string {
+  return (
+    typeof varde === "string" &&
+    varde.trim().length > 0 &&
+    varde.length <= MAX_TEXT_LENGTH &&
+    !UNSAFE_TEXT.test(varde)
+  );
+}
+
+/** Släpper bara igenom kända språk, kända kategorier och kända fält. */
+export function sanitizeTexts(texts: unknown): Texts {
+  if (!texts || typeof texts !== "object" || Array.isArray(texts)) return {};
+
+  const rensad: Texts = {};
+
+  for (const [sprak, kategorier] of Object.entries(texts as Record<string, unknown>)) {
+    if (!ALLOWED_LANGUAGES.has(sprak)) continue;
+    if (!kategorier || typeof kategorier !== "object" || Array.isArray(kategorier)) continue;
+
+    const perKategori: Record<string, Record<string, string>> = {};
+
+    for (const [kategori, falt] of Object.entries(kategorier as Record<string, unknown>)) {
+      if (!(CATEGORY_ORDER as readonly string[]).includes(kategori)) continue;
+      if (!falt || typeof falt !== "object" || Array.isArray(falt)) continue;
+
+      const perFalt: Record<string, string> = {};
+
+      for (const [namn, varde] of Object.entries(falt as Record<string, unknown>)) {
+        if (!ALLOWED_TEXT_FIELDS.has(namn)) continue;
+        // NÖDVÄNDIGA KAN ALDRIG BLI ETT BESKED. Samma invariant som i
+        // sanitizeCategories, och av samma skäl: bannern sätter sin egen
+        // samtyckescookie, så det finns inget läge där beskedet vore sant.
+        if (kategori === "necessary" && namn === "notice") continue;
+        if (!isValidText(varde)) continue;
+        perFalt[namn] = varde;
+      }
+
+      if (Object.keys(perFalt).length > 0) perKategori[kategori] = perFalt;
+    }
+
+    if (Object.keys(perKategori).length > 0) rensad[sprak] = perKategori;
+  }
+
+  return rensad;
+}
+
 configRoute.get("/:siteKey", async (c) => {
   const siteKey = c.req.param("siteKey");
 
@@ -319,7 +412,11 @@ configRoute.get("/:siteKey", async (c) => {
     const cachat = minne.get(siteKey);
     if (cachat && cachat.utgar > Date.now()) {
       setCacheHeaders();
-      return c.json({ design: cachat.design, categories: cachat.kategorier });
+      return c.json({
+        design: cachat.design,
+        categories: cachat.kategorier,
+        texts: cachat.texter,
+      });
     }
   }
 
@@ -330,12 +427,15 @@ configRoute.get("/:siteKey", async (c) => {
     // dar en racker ar anda dubbelt sa manga tillfallen att vanta pa natet.
     const website = await db.query.websites.findFirst({
       where: eq(websites.site_key, siteKey),
-      columns: { design: true },
+      columns: { design: true, texts: true },
       with: {
         categories: {
-          // description hamtas INTE. Det ar text, och text fran databasen ut
-          // pa kundsajter ar C1 steg 3 - den som bar XSS-ytan. Stegen ska
-          // halla isar, aven nar kolumnen ligger en armlangd bort.
+          // description hämtas fortfarande INTE, men av ett annat skäl än
+          // före steg 3: kolumnen är DÖD. Den skrivs av seed och onboard och
+          // läses ingenstans. Texterna ligger i websites.texts, där de kan
+          // nycklas på språk — och där de inte ligger på en rad som
+          // consent_choice pekar på med ON DELETE CASCADE. Presentation och
+          // bevis ska inte dela livslängd.
           columns: { key: true, is_required: true, is_active: true },
         },
       },
@@ -349,14 +449,20 @@ configRoute.get("/:siteKey", async (c) => {
 
     const design = sanitizeDesign(website.design);
     const kategorier = sanitizeCategories(website.categories);
+    const texter = sanitizeTexts(website.texts);
     // I farsklage skrivs inte minnescachen heller - annars hade nasta vanliga
     // anrop serverats ur ett resultat som hamtades for att kringga cachen.
     if (!farsk) {
-      minne.set(siteKey, { design, kategorier, utgar: Date.now() + MEMORY_TTL_MS });
+      minne.set(siteKey, {
+        design,
+        kategorier,
+        texter,
+        utgar: Date.now() + MEMORY_TTL_MS,
+      });
     }
 
     setCacheHeaders();
-    return c.json({ design, categories: kategorier });
+    return c.json({ design, categories: kategorier, texts: texter });
   } catch (fel) {
     console.error("[config] Kunde inte hamta design:", fel);
     // Bannern faller tillbaka pa sina standardvarden vid fel. Ingen cachning -

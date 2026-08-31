@@ -33,6 +33,21 @@ export const websites = pgTable("websites", {
   // Tomt objekt = sajten kor bannerns standardvarden. Sa lange kolumnen ar tom
   // pa alla sajter beter sig allt exakt som fore C1.
   design: jsonb("design").$type<Record<string, string>>().notNull().default({}),
+  // Sajtens egna texter (C1 steg 3). Nycklat på språk, sedan kategori, sedan
+  // fält: {"sv": {"marketing": {"notice": "Vi använder inga …"}}}.
+  //
+  // jsonb och samma resonemang som design: listan över fält kommer att växa,
+  // och varje nytt fält hade annars varit en schemaändring i produktion.
+  // Databasen validerar inte innehållet — det gör API:t mot en tillåten lista
+  // (se routes/config.ts).
+  //
+  // ALLT ÄR VALFRITT. Ett fält som saknas hämtas ur bannerns egen språktabell,
+  // så ett tomt objekt betyder att sajten kör bannerns texter — exakt som före
+  // steg 3. Det är därför utrullningen inte behöver röra en enda rad.
+  //
+  // ⚠️ REN TEXT, ALDRIG HTML. Bannern skriver värdena med textContent. Det är
+  // hela skälet till att steg 3 inte öppnar något XSS-hål.
+  texts: jsonb("texts").$type<Record<string, unknown>>().notNull().default({}),
   created_at: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
