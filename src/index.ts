@@ -46,22 +46,22 @@ let cache: { origins: Set<string>; utgar: number } | null = null;
 // bort av precis den anledningen. Skillnaden: en kall cache pa en ny
 // funktionsinstans kostar bara en extra databasfraga - den gor inte
 // funktionen verkningslos, sa som en nollstalld raknare gjorde.
-async function tillatnaOrigins(): Promise<Set<string>> {
+async function allowedOrigins(): Promise<Set<string>> {
   const nu = Date.now();
   if (cache && cache.utgar > nu) return cache.origins;
 
   try {
-    const rader = await db.query.websites.findMany({
+    const rows = await db.query.websites.findMany({
       columns: { allowed_origins: true },
     });
 
-    const alla = new Set(ENV_ORIGINS);
-    for (const rad of rader) {
-      for (const origin of rad.allowed_origins ?? []) alla.add(normalizeOrigin(origin));
+    const all = new Set(ENV_ORIGINS);
+    for (const row of rows) {
+      for (const origin of row.allowed_origins ?? []) all.add(normalizeOrigin(origin));
     }
 
-    cache = { origins: alla, utgar: nu + CACHE_MS };
-    return alla;
+    cache = { origins: all, utgar: nu + CACHE_MS };
+    return all;
   } catch {
     // Nar databasen inte gar att na: behall senast kanda lista hellre an att
     // sla igen for samtliga kunder. Finns ingen cache an, fall tillbaka pa
@@ -89,10 +89,10 @@ const oppenKors = cors({ origin: "*", allowMethods: ["GET", "OPTIONS"] });
 const lastKors = cors({
   origin: async (origin) => {
     if (!origin) return undefined;
-    const tillatna = await tillatnaOrigins();
+    const allowed = await allowedOrigins();
     // Svaret maste eka exakt den adress webblasaren skickade, inte den
     // normaliserade varianten.
-    return tillatna.has(normalizeOrigin(origin)) ? origin : undefined;
+    return allowed.has(normalizeOrigin(origin)) ? origin : undefined;
   },
   allowHeaders: ["Content-Type"],
   allowMethods: ["POST", "GET", "OPTIONS"],

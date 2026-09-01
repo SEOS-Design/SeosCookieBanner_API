@@ -31,7 +31,7 @@ const RETENTION_PERIOD = "12 months";
 const MAX_SHARE = 0.5;
 
 type Resultat = {
-  torrkorning: boolean;
+  dryRun: boolean;
   gallringstid: string;
   raderDessforinnan: number;
   raderAttGallra: number;
@@ -44,52 +44,52 @@ cronRoute.get("/gallra", async (c) => {
   // Vercel skickar Authorization: Bearer <CRON_SECRET> nar variabeln ar satt.
   // Saknas den vagrar vi kora - hellre en trasig cron som syns an en oppen
   // raderingsendpoint som inte gor det.
-  const hemlighet = process.env.CRON_SECRET;
-  if (!hemlighet) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
     console.error("[Gallring] CRON_SECRET saknas - endpointen ar avstangd.");
     return c.json({ message: "Cron secret not configured." }, 500);
   }
-  if (c.req.header("authorization") !== `Bearer ${hemlighet}`) {
+  if (c.req.header("authorization") !== `Bearer ${secret}`) {
     return c.json({ message: "Unauthorized." }, 401);
   }
 
-  const torrkorning = c.req.query("dryRun") === "1";
+  const dryRun = c.req.query("dryRun") === "1";
 
   try {
-    const totaltRad = await db.execute<{ n: number }>(
+    const totalRows = await db.execute<{ n: number }>(
       sql`SELECT count(*)::int AS n FROM consent_event`,
     );
-    const attGallraRad = await db.execute<{ n: number }>(
+    const pruneRow = await db.execute<{ n: number }>(
       sql`SELECT count(*)::int AS n FROM consent_event
           WHERE created_at < now() - ${sql.raw(`interval '${RETENTION_PERIOD}'`)}`,
     );
 
-    const totalt = Number(totaltRad.rows[0]?.n ?? 0);
-    const attGallra = Number(attGallraRad.rows[0]?.n ?? 0);
+    const total = Number(totalRows.rows[0]?.n ?? 0);
+    const toPrune = Number(pruneRow.rows[0]?.n ?? 0);
 
-    const resultat: Resultat = {
-      torrkorning,
+    const result: Resultat = {
+      dryRun,
       gallringstid: RETENTION_PERIOD,
-      raderDessforinnan: totalt,
-      raderAttGallra: attGallra,
+      raderDessforinnan: total,
+      raderAttGallra: toPrune,
       raderadeEvents: 0,
       raderadeIdentiteter: 0,
     };
 
-    if (attGallra === 0) {
+    if (toPrune === 0) {
       console.log("[Gallring] Inget att gallra.");
-      return c.json(resultat);
+      return c.json(result);
     }
 
-    if (totalt > 0 && attGallra / totalt > MAX_SHARE) {
-      resultat.avbruten = `Skulle radera ${attGallra} av ${totalt} rader (over ${MAX_SHARE * 100} %). Avbryter - kontrollera gallringstiden.`;
-      console.error("[Gallring] AVBRUTEN:", resultat.avbruten);
-      return c.json(resultat, 500);
+    if (total > 0 && toPrune / total > MAX_SHARE) {
+      result.avbruten = `Skulle radera ${toPrune} av ${total} rader (over ${MAX_SHARE * 100} %). Avbryter - kontrollera gallringstiden.`;
+      console.error("[Gallring] AVBRUTEN:", result.avbruten);
+      return c.json(result, 500);
     }
 
-    if (torrkorning) {
-      console.log(`[Gallring] Torrkorning: ${attGallra} rader skulle raderas.`);
-      return c.json(resultat);
+    if (dryRun) {
+      console.log(`[Gallring] Torrkorning: ${toPrune} rader skulle raderas.`);
+      return c.json(result);
     }
 
     // consent_choice foljer med via ON DELETE CASCADE.
@@ -99,18 +99,18 @@ cronRoute.get("/gallra", async (c) => {
     );
 
     // Identiteter utan kvarvarande handelser fyller ingen funktion langre.
-    const identiteter = await db.execute(
+    const identities = await db.execute(
       sql`DELETE FROM identity i
           WHERE NOT EXISTS (SELECT 1 FROM consent_event e WHERE e.identity_id = i.id)`,
     );
 
-    resultat.raderadeEvents = events.rowCount ?? 0;
-    resultat.raderadeIdentiteter = identiteter.rowCount ?? 0;
+    result.raderadeEvents = events.rowCount ?? 0;
+    result.raderadeIdentiteter = identities.rowCount ?? 0;
 
     console.log(
-      `[Gallring] Raderade ${resultat.raderadeEvents} handelser och ${resultat.raderadeIdentiteter} identiteter.`,
+      `[Gallring] Raderade ${result.raderadeEvents} handelser och ${result.raderadeIdentiteter} identiteter.`,
     );
-    return c.json(resultat);
+    return c.json(result);
   } catch (error) {
     console.error("[Gallring] Misslyckades:", error);
     return c.json({ message: "Gallring failed." }, 500);

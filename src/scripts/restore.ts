@@ -24,14 +24,14 @@ import { Pool } from "pg";
  * Skriptet raderar aldrig nagot. Bara tillagg.
  */
 
-const arg = (namn: string): string | undefined =>
-  process.argv.find((a) => a.startsWith(`--${namn}=`))?.split("=").slice(1).join("=");
+const arg = (name: string): string | undefined =>
+  process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=").slice(1).join("=");
 
-const flagga = (namn: string): boolean => process.argv.includes(`--${namn}`);
+const flag = (name: string): boolean => process.argv.includes(`--${name}`);
 
 const BATCH = 500;
 
-const anvandning = `
+const usage = `
 Anvandning:
   npm run aterstall -- --fil=<sokvag> --env=<MILJOVARIABEL> [--kor]
 
@@ -44,30 +44,30 @@ Anvandning:
 `;
 
 const run = async () => {
-  const filvag = arg("fil");
-  const envNamn = arg("env");
-  const dbDirekt = arg("db");
-  const skarpt = flagga("kor");
+  const filePath = arg("fil");
+  const envName = arg("env");
+  const dbDirect = arg("db");
+  const live = flag("kor");
 
-  if (!filvag || (!envNamn && !dbDirekt)) {
-    console.log(anvandning);
+  if (!filePath || (!envName && !dbDirect)) {
+    console.log(usage);
     process.exit(1);
   }
 
-  if (!existsSync(filvag)) {
-    console.error(`Hittar ingen fil pa '${filvag}'.`);
+  if (!existsSync(filePath)) {
+    console.error(`Hittar ingen fil pa '${filePath}'.`);
     process.exit(1);
   }
 
-  const anslutning = dbDirekt ?? process.env[envNamn!];
-  if (!anslutning) {
-    console.error(`Miljovariabeln '${envNamn}' ar tom eller saknas.`);
+  const connection = dbDirect ?? process.env[envName!];
+  if (!connection) {
+    console.error(`Miljovariabeln '${envName}' ar tom eller saknas.`);
     process.exit(1);
   }
 
   // Sparr: aterstallning mot produktion ska vara ett medvetet val, aldrig nagot
   // man rakar gora for att man kopierade fel rad ur historiken.
-  if (anslutning === process.env.DATABASE_URL && !flagga("tillat-produktion")) {
+  if (connection === process.env.DATABASE_URL && !flag("tillat-produktion")) {
     console.error(
       "\nMalet ar PRODUKTIONSDATABASEN.\n" +
         "Lagg till --tillat-produktion om det ar meningen.\n",
@@ -76,73 +76,73 @@ const run = async () => {
   }
 
   // --- Las och kontrollera filen -------------------------------------------
-  const kopia = JSON.parse(gunzipSync(readFileSync(filvag)).toString("utf8"));
+  const copy = JSON.parse(gunzipSync(readFileSync(filePath)).toString("utf8"));
 
-  if (!kopia.tabeller || !Array.isArray(kopia.aterstallningsordning)) {
+  if (!copy.tables || !Array.isArray(copy.aterstallningsordning)) {
     console.error("Filen ser inte ut som en sakerhetskopia (saknar tabeller eller ordning).");
     process.exit(1);
   }
 
-  const ordning: string[] = kopia.aterstallningsordning;
+  const order: string[] = copy.aterstallningsordning;
 
   console.log("");
   console.log("SAKERHETSKOPIA");
-  console.log("  fil     :", filvag);
-  console.log("  skapad  :", kopia.skapad);
-  console.log("  tabeller:", ordning.join(" -> "));
+  console.log("  fil     :", filePath);
+  console.log("  skapad  :", copy.skapad);
+  console.log("  tabeller:", order.join(" -> "));
   console.log("");
-  console.log(skarpt ? "SKARP KORNING - rader kommer att laggas till" : "TORRKORNING - inget skrivs");
+  console.log(live ? "SKARP KORNING - rader kommer att laggas till" : "TORRKORNING - inget skrivs");
   console.log("");
 
-  const pool = new Pool({ connectionString: anslutning });
+  const pool = new Pool({ connectionString: connection });
 
   try {
-    let totaltSaknade = 0;
-    let totaltInlagda = 0;
+    let totalMissing = 0;
+    let totalInserted = 0;
 
-    for (const tabell of ordning) {
-      const rader: Record<string, unknown>[] = kopia.tabeller[tabell] ?? [];
-      if (rader.length === 0) {
-        console.log(`  ${tabell.padEnd(18)} tom i kopian, hoppar over`);
+    for (const table of order) {
+      const rows: Record<string, unknown>[] = copy.tables[table] ?? [];
+      if (rows.length === 0) {
+        console.log(`  ${table.padEnd(18)} tom i kopian, hoppar over`);
         continue;
       }
 
       // Vilka id:n finns redan? Da vet vi vad som faktiskt saknas.
-      const idn = rader.map((r) => r.id);
+      const ids = rows.map((r) => r.id);
       const { rows: befintliga } = await pool.query(
-        `SELECT id FROM "${tabell}" WHERE id = ANY($1::uuid[])`,
-        [idn],
+        `SELECT id FROM "${table}" WHERE id = ANY($1::uuid[])`,
+        [ids],
       );
       const finns = new Set(befintliga.map((r) => r.id));
-      const saknade = rader.filter((r) => !finns.has(r.id));
-      totaltSaknade += saknade.length;
+      const missing = rows.filter((r) => !finns.has(r.id));
+      totalMissing += missing.length;
 
-      if (saknade.length === 0) {
-        console.log(`  ${tabell.padEnd(18)} ${String(rader.length).padStart(6)} rader, inga saknas`);
+      if (missing.length === 0) {
+        console.log(`  ${table.padEnd(18)} ${String(rows.length).padStart(6)} rader, inga saknas`);
         continue;
       }
 
-      if (!skarpt) {
+      if (!live) {
         console.log(
-          `  ${tabell.padEnd(18)} ${String(rader.length).padStart(6)} rader, ${saknade.length} SAKNAS`,
+          `  ${table.padEnd(18)} ${String(rows.length).padStart(6)} rader, ${missing.length} SAKNAS`,
         );
         continue;
       }
 
-      const kolumner = Object.keys(saknade[0]!);
-      let inlagda = 0;
+      const columns = Object.keys(missing[0]!);
+      let inserted = 0;
 
-      for (let i = 0; i < saknade.length; i += BATCH) {
-        const grupp = saknade.slice(i, i + BATCH);
-        const varden: unknown[] = [];
-        const platshallare = grupp
+      for (let i = 0; i < missing.length; i += BATCH) {
+        const group = missing.slice(i, i + BATCH);
+        const values: unknown[] = [];
+        const placeholders = group
           .map(
-            (rad, radIndex) =>
+            (row, radIndex) =>
               "(" +
-              kolumner
+              columns
                 .map((kol, kolIndex) => {
-                  varden.push(rad[kol]);
-                  return `$${radIndex * kolumner.length + kolIndex + 1}`;
+                  values.push(row[kol]);
+                  return `$${radIndex * columns.length + kolIndex + 1}`;
                 })
                 .join(", ") +
               ")",
@@ -150,27 +150,27 @@ const run = async () => {
           .join(", ");
 
         const res = await pool.query(
-          `INSERT INTO "${tabell}" (${kolumner.map((k) => `"${k}"`).join(", ")})
-           VALUES ${platshallare}
+          `INSERT INTO "${table}" (${columns.map((k) => `"${k}"`).join(", ")})
+           VALUES ${placeholders}
            ON CONFLICT (id) DO NOTHING`,
-          varden,
+          values,
         );
-        inlagda += res.rowCount ?? 0;
+        inserted += res.rowCount ?? 0;
       }
 
-      totaltInlagda += inlagda;
+      totalInserted += inserted;
       console.log(
-        `  ${tabell.padEnd(18)} ${String(rader.length).padStart(6)} rader, ${saknade.length} saknades, ${inlagda} inlagda`,
+        `  ${table.padEnd(18)} ${String(rows.length).padStart(6)} rader, ${missing.length} saknades, ${inserted} inlagda`,
       );
     }
 
     console.log("");
-    if (skarpt) {
-      console.log(`KLART. ${totaltInlagda} rader aterstallda.`);
-    } else if (totaltSaknade === 0) {
+    if (live) {
+      console.log(`KLART. ${totalInserted} rader aterstallda.`);
+    } else if (totalMissing === 0) {
       console.log("Databasen ar redan komplett - ingenting saknas.");
     } else {
-      console.log(`${totaltSaknade} rader saknas. Lagg till --kor for att lagga tillbaka dem.`);
+      console.log(`${totalMissing} rader saknas. Lagg till --kor for att lagga tillbaka dem.`);
     }
     console.log("");
   } finally {

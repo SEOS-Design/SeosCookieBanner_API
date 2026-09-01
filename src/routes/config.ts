@@ -100,12 +100,12 @@ type Category = {
 // där ett fel kan smyga sig in.
 type Texts = Record<string, Record<string, Record<string, string>>>;
 
-const minne = new Map<
+const memory = new Map<
   string,
   {
     design: Record<string, string>;
-    kategorier: Category[];
-    texter: Texts;
+    categories: Category[];
+    texts: Texts;
     utgar: number;
   }
 >();
@@ -181,12 +181,12 @@ const ALLOWED_VARIABLES = new Set([
 // den ar det som gor ett framtida admin-granssnitt (D4) ofarligt att bygga.
 const UNSAFE_VALUE = /url\(|expression\(|javascript:|@import|[<>{}\\;]/i;
 
-function isValidValue(varde: unknown): varde is string {
+function isValidValue(value: unknown): value is string {
   return (
-    typeof varde === "string" &&
-    varde.length > 0 &&
-    varde.length <= MAX_VALUE_LENGTH &&
-    !UNSAFE_VALUE.test(varde)
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_VALUE_LENGTH &&
+    !UNSAFE_VALUE.test(value)
   );
 }
 
@@ -194,13 +194,13 @@ function isValidValue(varde: unknown): varde is string {
 export function sanitizeDesign(design: unknown): Record<string, string> {
   if (!design || typeof design !== "object" || Array.isArray(design)) return {};
 
-  const rensad: Record<string, string> = {};
-  for (const [nyckel, varde] of Object.entries(design as Record<string, unknown>)) {
+  const cleaned: Record<string, string> = {};
+  for (const [nyckel, value] of Object.entries(design as Record<string, unknown>)) {
     if (!ALLOWED_VARIABLES.has(nyckel)) continue;
-    if (!isValidValue(varde)) continue;
-    rensad[nyckel] = varde;
+    if (!isValidValue(value)) continue;
+    cleaned[nyckel] = value;
   }
-  return rensad;
+  return cleaned;
 }
 
 // VILKA KATEGORIER SOM GAR ATT VISA - och i vilken ordning
@@ -253,25 +253,25 @@ const CATEGORY_ORDER = [
  * tillbaka pa sina fyra standardkategorier, alla som reglage. En banner utan
  * kategorier vore ett mycket varre fel an en banner med for manga.
  */
-export function sanitizeCategories(rader: unknown): Category[] {
-  if (!Array.isArray(rader)) return [];
+export function sanitizeCategories(rows: unknown): Category[] {
+  if (!Array.isArray(rows)) return [];
 
-  const funna = new Map<string, { is_required: boolean; anvands: boolean }>();
+  const found = new Map<string, { is_required: boolean; anvands: boolean }>();
 
-  for (const rad of rader) {
-    if (!rad || typeof rad !== "object") continue;
-    const { key, is_required, is_active } = rad as Record<string, unknown>;
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const { key, is_required, is_active } = row as Record<string, unknown>;
     if (typeof key !== "string") continue;
     if (!(CATEGORY_ORDER as readonly string[]).includes(key)) continue;
     // Bara ett uttryckligt false ger besked. Saknas kolumnen visas reglaget -
     // det sakra fallet ar att FRAGA, inte att pasta nagot om sajten.
-    funna.set(key, {
+    found.set(key, {
       is_required: is_required === true,
       anvands: is_active !== false,
     });
   }
 
-  if (funna.size === 0) return [];
+  if (found.size === 0) return [];
 
   // NODVANDIGA AR ALLTID MED, ALLTID OBLIGATORISKA OCH ALLTID ETT REGLAGE.
   //
@@ -283,14 +283,14 @@ export function sanitizeCategories(rader: unknown): Category[] {
   // Invarianten ligger har och inte i ett databasvillkor av samma skal som
   // geometrin avvisas i publish-design: felet ska fangas med en forklaring,
   // inte tyst falla bort langre fram.
-  funna.set("necessary", { is_required: true, anvands: true });
+  found.set("necessary", { is_required: true, anvands: true });
 
-  return CATEGORY_ORDER.filter((key) => funna.has(key)).map((key) => {
-    const rad = funna.get(key)!;
+  return CATEGORY_ORDER.filter((key) => found.has(key)).map((key) => {
+    const row = found.get(key)!;
     return {
       key,
-      is_required: rad.is_required,
-      visibility: rad.anvands ? ("toggle" as const) : ("notice" as const),
+      is_required: row.is_required,
+      visibility: row.anvands ? ("toggle" as const) : ("notice" as const),
     };
   });
 }
@@ -332,12 +332,12 @@ const MAX_TEXT_LENGTH = 300;
 // Vinkelparenteser räcker: allt annat som gör HTML farligt behöver dem.
 const UNSAFE_TEXT = /[<>]/;
 
-function isValidText(varde: unknown): varde is string {
+function isValidText(value: unknown): value is string {
   return (
-    typeof varde === "string" &&
-    varde.trim().length > 0 &&
-    varde.length <= MAX_TEXT_LENGTH &&
-    !UNSAFE_TEXT.test(varde)
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    value.length <= MAX_TEXT_LENGTH &&
+    !UNSAFE_TEXT.test(value)
   );
 }
 
@@ -345,37 +345,37 @@ function isValidText(varde: unknown): varde is string {
 export function sanitizeTexts(texts: unknown): Texts {
   if (!texts || typeof texts !== "object" || Array.isArray(texts)) return {};
 
-  const rensad: Texts = {};
+  const cleaned: Texts = {};
 
-  for (const [sprak, kategorier] of Object.entries(texts as Record<string, unknown>)) {
+  for (const [sprak, categories] of Object.entries(texts as Record<string, unknown>)) {
     if (!ALLOWED_LANGUAGES.has(sprak)) continue;
-    if (!kategorier || typeof kategorier !== "object" || Array.isArray(kategorier)) continue;
+    if (!categories || typeof categories !== "object" || Array.isArray(categories)) continue;
 
-    const perKategori: Record<string, Record<string, string>> = {};
+    const perCategory: Record<string, Record<string, string>> = {};
 
-    for (const [kategori, falt] of Object.entries(kategorier as Record<string, unknown>)) {
-      if (!(CATEGORY_ORDER as readonly string[]).includes(kategori)) continue;
+    for (const [category, falt] of Object.entries(categories as Record<string, unknown>)) {
+      if (!(CATEGORY_ORDER as readonly string[]).includes(category)) continue;
       if (!falt || typeof falt !== "object" || Array.isArray(falt)) continue;
 
-      const perFalt: Record<string, string> = {};
+      const perField: Record<string, string> = {};
 
-      for (const [namn, varde] of Object.entries(falt as Record<string, unknown>)) {
-        if (!ALLOWED_TEXT_FIELDS.has(namn)) continue;
+      for (const [name, value] of Object.entries(falt as Record<string, unknown>)) {
+        if (!ALLOWED_TEXT_FIELDS.has(name)) continue;
         // NÖDVÄNDIGA KAN ALDRIG BLI ETT BESKED. Samma invariant som i
         // sanitizeCategories, och av samma skäl: bannern sätter sin egen
         // samtyckescookie, så det finns inget läge där beskedet vore sant.
-        if (kategori === "necessary" && namn === "notice") continue;
-        if (!isValidText(varde)) continue;
-        perFalt[namn] = varde;
+        if (category === "necessary" && name === "notice") continue;
+        if (!isValidText(value)) continue;
+        perField[name] = value;
       }
 
-      if (Object.keys(perFalt).length > 0) perKategori[kategori] = perFalt;
+      if (Object.keys(perField).length > 0) perCategory[category] = perField;
     }
 
-    if (Object.keys(perKategori).length > 0) rensad[sprak] = perKategori;
+    if (Object.keys(perCategory).length > 0) cleaned[sprak] = perCategory;
   }
 
-  return rensad;
+  return cleaned;
 }
 
 configRoute.get("/:siteKey", async (c) => {
@@ -406,16 +406,16 @@ configRoute.get("/:siteKey", async (c) => {
   // Kostar ingenting i drift: bara den som sjalv ber om det gar forbi, och
   // det ar en manniska at gangen. Ingen ny angreppsyta heller -
   // policy-endpointen ar redan ocachad och traffar databasen likadant.
-  const farsk = c.req.query("farsk") !== undefined;
+  const fresh = c.req.query("farsk") !== undefined;
 
-  if (!farsk) {
-    const cachat = minne.get(siteKey);
-    if (cachat && cachat.utgar > Date.now()) {
+  if (!fresh) {
+    const cached = memory.get(siteKey);
+    if (cached && cached.utgar > Date.now()) {
       setCacheHeaders();
       return c.json({
-        design: cachat.design,
-        categories: cachat.kategorier,
-        texts: cachat.texter,
+        design: cached.design,
+        categories: cached.categories,
+        texts: cached.texts,
       });
     }
   }
@@ -448,23 +448,23 @@ configRoute.get("/:siteKey", async (c) => {
     }
 
     const design = sanitizeDesign(website.design);
-    const kategorier = sanitizeCategories(website.categories);
-    const texter = sanitizeTexts(website.texts);
+    const categories = sanitizeCategories(website.categories);
+    const texts = sanitizeTexts(website.texts);
     // I farsklage skrivs inte minnescachen heller - annars hade nasta vanliga
     // anrop serverats ur ett resultat som hamtades for att kringga cachen.
-    if (!farsk) {
-      minne.set(siteKey, {
+    if (!fresh) {
+      memory.set(siteKey, {
         design,
-        kategorier,
-        texter,
+        categories,
+        texts,
         utgar: Date.now() + MEMORY_TTL_MS,
       });
     }
 
     setCacheHeaders();
-    return c.json({ design, categories: kategorier, texts: texter });
-  } catch (fel) {
-    console.error("[config] Kunde inte hamta design:", fel);
+    return c.json({ design, categories: categories, texts: texts });
+  } catch (error) {
+    console.error("[config] Kunde inte hamta design:", error);
     // Bannern faller tillbaka pa sina standardvarden vid fel. Ingen cachning -
     // ett tillfalligt databasfel ska inte ligga kvar i fem minuter.
     return c.json({ message: "Could not load configuration." }, 500);

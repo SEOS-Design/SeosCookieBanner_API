@@ -99,52 +99,52 @@ const MAX_VALUE_LENGTH = 200;
 // nagot fran en adress vi inte valt.
 const UNSAFE_VALUE = /url\(|expression\(|javascript:|@import|[<>{}\\;]/i;
 
-const arg = (namn: string): string | undefined =>
-  process.argv.find((a) => a.startsWith(`--${namn}=`))?.split("=").slice(1).join("=");
+const arg = (name: string): string | undefined =>
+  process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=").slice(1).join("=");
 
-const harFlagga = (namn: string): boolean => process.argv.includes(`--${namn}`);
+const hasFlag = (name: string): boolean => process.argv.includes(`--${name}`);
 
-const kortNamn = (domain: string): string => domain.replace(/^www\./, "").split(".")[0]!;
+const toShortName = (domain: string): string => domain.replace(/^www\./, "").split(".")[0]!;
 
 /**
  * Plockar ut CSS-variabler ur en fil. Medvetet enkelt: allt utom
  * `--namn: varde;` ignoreras. Kommentarer tas bort forst.
  */
 export function parseVariables(css: string): Record<string, string> {
-  const utanKommentarer = css.replace(/\/\*[\s\S]*?\*\//g, "");
-  const funna: Record<string, string> = {};
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const found: Record<string, string> = {};
 
-  const monster = /--([a-zA-Z0-9-]+)\s*:\s*([^;]+);/g;
+  const pattern = /--([a-zA-Z0-9-]+)\s*:\s*([^;]+);/g;
   let trafF: RegExpExecArray | null;
-  while ((trafF = monster.exec(utanKommentarer)) !== null) {
-    const namn = trafF[1]!.trim();
+  while ((trafF = pattern.exec(withoutComments)) !== null) {
+    const name = trafF[1]!.trim();
     // Radbrytningar och dubbla mellanslag plattas ut - ett CSS-varde far
     // spanna flera rader i filen men ska lagras som en rad.
-    const varde = trafF[2]!.replace(/\s+/g, " ").trim();
-    funna[namn] = varde;
+    const value = trafF[2]!.replace(/\s+/g, " ").trim();
+    found[name] = value;
   }
-  return funna;
+  return found;
 }
 
 const run = async () => {
   const site = arg("site");
   // --run ar den dokumenterade flaggan. --kor accepteras ocksa, eftersom
   // aterstallningsskriptet anvander den och muskelminnet inte ska straffas.
-  const kor = harFlagga("run") || harFlagga("kor");
-  const status = harFlagga("status");
+  const run = hasFlag("run") || hasFlag("kor");
+  const status = hasFlag("status");
 
-  const allaSajter = await db.query.websites.findMany({
+  const allSites = await db.query.websites.findMany({
     columns: { id: true, name: true, domain: true, design: true },
   });
 
   if (status) {
     console.log("\nDesign per sajt (databasen):\n");
-    for (const s of allaSajter) {
-      const antal = Object.keys(s.design ?? {}).length;
-      const fil = join("design", `${kortNamn(s.domain)}.css`);
+    for (const s of allSites) {
+      const count = Object.keys(s.design ?? {}).length;
+      const file = join("design", `${toShortName(s.domain)}.css`);
       console.log(
-        `  ${kortNamn(s.domain).padEnd(14)} ${String(antal).padStart(2)} variabler   ` +
-          `${existsSync(fil) ? fil : "(ingen fil)"}`,
+        `  ${toShortName(s.domain).padEnd(14)} ${String(count).padStart(2)} variabler   ` +
+          `${existsSync(file) ? file : "(ingen fil)"}`,
       );
     }
     console.log(
@@ -163,19 +163,19 @@ const run = async () => {
     process.exit(1);
   }
 
-  const sajt = allaSajter.find((s) => kortNamn(s.domain) === site);
-  if (!sajt) {
+  const website = allSites.find((s) => toShortName(s.domain) === site);
+  if (!website) {
     console.error(
       `Hittade ingen sajt som matchar '${site}'. ` +
-        `Tillgangliga: ${allaSajter.map((s) => kortNamn(s.domain)).join(", ")}`,
+        `Tillgangliga: ${allSites.map((s) => toShortName(s.domain)).join(", ")}`,
     );
     process.exit(1);
   }
 
-  const sokvag = join("design", `${site}.css`);
-  if (!existsSync(sokvag)) {
+  const path = join("design", `${site}.css`);
+  if (!existsSync(path)) {
     console.error(
-      `Filen ${sokvag} finns inte.\n\n` +
+      `Filen ${path} finns inte.\n\n` +
         `Skapa den med sajtens variabler:\n\n` +
         `  :root {\n    --bg-main: #efe1c9;\n    --radius-md: 24px;\n  }\n\n` +
         `Ska sajten kora bannerns standardvarden behovs ingen fil alls.`,
@@ -183,64 +183,64 @@ const run = async () => {
     process.exit(1);
   }
 
-  const funna = parseVariables(readFileSync(sokvag, "utf8"));
+  const found = parseVariables(readFileSync(path, "utf8"));
   const design: Record<string, string> = {};
-  const problem: string[] = [];
+  const issues: string[] = [];
 
-  for (const [namn, varde] of Object.entries(funna)) {
-    if (GEOMETRY.has(namn)) {
-      problem.push(
-        `  --${namn}: geometri gar inte att satta per sajt.\n` +
+  for (const [name, value] of Object.entries(found)) {
+    if (GEOMETRY.has(name)) {
+      issues.push(
+        `  --${name}: geometri gar inte att satta per sajt.\n` +
           `      Bannern ska kannas som samma komponent pa alla sajter. Ser storleken\n` +
           `      fel ut ska BASVARDET rattas i banner-src/style.css - da nar andringen\n` +
           `      alla sajter. Satts vardet har nar framtida basandringar aldrig fram.`,
       );
       continue;
     }
-    if (!ALLOWED.has(namn)) {
-      problem.push(`  --${namn}: okand variabel, hoppas over.`);
+    if (!ALLOWED.has(name)) {
+      issues.push(`  --${name}: okand variabel, hoppas over.`);
       continue;
     }
-    if (varde.length > MAX_VALUE_LENGTH) {
-      problem.push(`  --${namn}: vardet ar langre an ${MAX_VALUE_LENGTH} tecken.`);
+    if (value.length > MAX_VALUE_LENGTH) {
+      issues.push(`  --${name}: vardet ar langre an ${MAX_VALUE_LENGTH} tecken.`);
       continue;
     }
-    if (UNSAFE_VALUE.test(varde)) {
-      problem.push(
-        `  --${namn}: vardet innehaller url() eller liknande. Ett CSS-varde som\n` +
+    if (UNSAFE_VALUE.test(value)) {
+      issues.push(
+        `  --${name}: vardet innehaller url() eller liknande. Ett CSS-varde som\n` +
           `      hamtar nagot fran en adress vi inte valt ar en vag att spara besokare.`,
       );
       continue;
     }
-    design[namn] = varde;
+    design[name] = value;
   }
 
-  const nuvarande = (sajt.design ?? {}) as Record<string, string>;
-  const nycklar = new Set([...Object.keys(nuvarande), ...Object.keys(design)]);
-  const andringar: string[] = [];
-  for (const n of [...nycklar].sort()) {
-    const fran = nuvarande[n];
+  const current = (website.design ?? {}) as Record<string, string>;
+  const keys = new Set([...Object.keys(current), ...Object.keys(design)]);
+  const changes: string[] = [];
+  for (const n of [...keys].sort()) {
+    const fran = current[n];
     const till = design[n];
     if (fran === till) continue;
-    if (fran === undefined) andringar.push(`  + --${n}: ${till}`);
-    else if (till === undefined) andringar.push(`  - --${n}  (togs bort, ${fran})`);
-    else andringar.push(`  ~ --${n}: ${fran}  ->  ${till}`);
+    if (fran === undefined) changes.push(`  + --${n}: ${till}`);
+    else if (till === undefined) changes.push(`  - --${n}  (togs bort, ${fran})`);
+    else changes.push(`  ~ --${n}: ${fran}  ->  ${till}`);
   }
 
-  console.log(`\n${sajt.domain}   ${sokvag}\n`);
+  console.log(`\n${website.domain}   ${path}\n`);
 
-  if (problem.length) {
-    console.log("Hoppade over:\n" + problem.join("\n") + "\n");
+  if (issues.length) {
+    console.log("Hoppade over:\n" + issues.join("\n") + "\n");
   }
 
-  if (!andringar.length) {
+  if (!changes.length) {
     console.log("Ingen skillnad mot databasen. Ingenting att gora.\n");
     process.exit(0);
   }
 
-  console.log(`${andringar.length} andringar:\n` + andringar.join("\n") + "\n");
+  console.log(`${changes.length} andringar:\n` + changes.join("\n") + "\n");
 
-  if (!kor) {
+  if (!run) {
     console.log(
       "Torrkorning - ingenting skrivet. Lagg till --run nar du sett att det stammer.\n" +
         "OBS: vardena satts som inline style pa bannern och VINNER over kundens\n" +
@@ -249,13 +249,13 @@ const run = async () => {
     process.exit(0);
   }
 
-  await db.update(websites).set({ design }).where(eq(websites.id, sajt.id));
+  await db.update(websites).set({ design }).where(eq(websites.id, website.id));
 
   console.log(
     "Skrivet till databasen.\n\n" +
       "SA HAR SER DU DET:\n" +
       `  Direkt, for dig    Oppna sajten med ?seos_farsk=1 pa slutet:\n` +
-      `                     https://${sajt.domain}/?seos_farsk=1\n\n` +
+      `                     https://${website.domain}/?seos_farsk=1\n\n` +
       "  Direkt, for ALLA   Redeploya API:t i Vercel (Deployments -> senaste\n" +
       "                     -> Redeploy). CDN:et cachar per deployment, sa en ny\n" +
       "                     deployment gor att gamla sparade svar slutar anvandas.\n\n" +
@@ -270,8 +270,8 @@ const run = async () => {
 // parseVariables() en databasanslutning och kor hela publiceringen - vilket gor
 // tolken omojlig att testa separat.
 if (require.main === module) {
-  run().catch((fel) => {
-    console.error("Publiceringen misslyckades:", fel);
+  run().catch((error) => {
+    console.error("Publiceringen misslyckades:", error);
     process.exit(1);
   });
 }

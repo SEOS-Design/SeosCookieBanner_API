@@ -47,83 +47,83 @@ const TABLES = [
 ] as const;
 
 backupRoute.get("/backup", async (c) => {
-  const hemlighet = process.env.CRON_SECRET;
-  if (!hemlighet) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
     console.error("[Backup] CRON_SECRET saknas - endpointen ar avstangd.");
     return c.json({ message: "Cron secret not configured." }, 500);
   }
-  if (c.req.header("authorization") !== `Bearer ${hemlighet}`) {
+  if (c.req.header("authorization") !== `Bearer ${secret}`) {
     return c.json({ message: "Unauthorized." }, 401);
   }
 
-  const torrkorning = c.req.query("dryRun") === "1";
+  const dryRun = c.req.query("dryRun") === "1";
 
   try {
-    const tabeller: Record<string, unknown[]> = {};
-    const antal: Record<string, number> = {};
+    const tables: Record<string, unknown[]> = {};
+    const count: Record<string, number> = {};
 
-    for (const tabell of TABLES) {
-      const rader = await db.execute(sql`SELECT * FROM ${sql.identifier(tabell)}`);
-      tabeller[tabell] = rader.rows;
-      antal[tabell] = rader.rows.length;
+    for (const table of TABLES) {
+      const rows = await db.execute(sql`SELECT * FROM ${sql.identifier(table)}`);
+      tables[table] = rows.rows;
+      count[table] = rows.rows.length;
     }
 
     // En kopia utan bevisloggen ar inte en kopia. Hellre avbryta an att skriva
     // en tom fil som ser ut som ett skyddsnat.
-    if ((antal["consent_event"] ?? 0) === 0) {
+    if ((count["consent_event"] ?? 0) === 0) {
       console.error("[Backup] AVBRUTEN: consent_event ar tom - skriver ingen kopia.");
-      return c.json({ message: "Refusing to write an empty backup.", antal }, 500);
+      return c.json({ message: "Refusing to write an empty backup.", count }, 500);
     }
 
-    const datum = new Date().toISOString().slice(0, 10);
-    const filnamn = `${PREFIX}${datum}.json.gz`;
+    const date = new Date().toISOString().slice(0, 10);
+    const fileName = `${PREFIX}${date}.json.gz`;
 
-    const innehall = gzipSync(
+    const content = gzipSync(
       Buffer.from(
         JSON.stringify({
           skapad: new Date().toISOString(),
           format: 1,
           aterstallningsordning: TABLES,
-          antal,
-          tabeller,
+          count,
+          tables,
         }),
       ),
     );
 
-    if (torrkorning) {
-      console.log(`[Backup] Torrkorning: ${filnamn}, ${innehall.byteLength} byte.`);
-      return c.json({ torrkorning: true, filnamn, storlek: innehall.byteLength, antal });
+    if (dryRun) {
+      console.log(`[Backup] Torrkorning: ${fileName}, ${content.byteLength} byte.`);
+      return c.json({ dryRun: true, fileName, storlek: content.byteLength, count });
     }
 
     // allowOverwrite sa att en omkorning samma dygn ersatter dagens fil i
     // stallet for att faila.
-    const blob = await put(filnamn, innehall, {
+    const blob = await put(fileName, content, {
       access: "private",
       contentType: "application/gzip",
       allowOverwrite: true,
     });
 
     // Gallra gamla kopior. Radering ar gratis hos Blob.
-    const granse = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;
+    const limit = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;
     const { blobs } = await list({ prefix: PREFIX });
-    const gamla = blobs.filter((b) => new Date(b.uploadedAt).getTime() < granse);
-    if (gamla.length > 0) await del(gamla.map((b) => b.url));
+    const old = blobs.filter((b) => new Date(b.uploadedAt).getTime() < limit);
+    if (old.length > 0) await del(old.map((b) => b.url));
 
     console.log(
-      `[Backup] Skrev ${filnamn} (${innehall.byteLength} byte). Raderade ${gamla.length} gamla kopior. Totalt ${blobs.length - gamla.length + 1} kvar.`,
+      `[Backup] Skrev ${fileName} (${content.byteLength} byte). Raderade ${old.length} gamla kopior. Totalt ${blobs.length - old.length + 1} kvar.`,
     );
 
     return c.json({
-      torrkorning: false,
-      filnamn,
-      storlek: innehall.byteLength,
-      antal,
-      raderadeGamla: gamla.length,
-      kopiorKvar: blobs.length - gamla.length + 1,
+      dryRun: false,
+      fileName,
+      storlek: content.byteLength,
+      count,
+      raderadeGamla: old.length,
+      kopiorKvar: blobs.length - old.length + 1,
       pathname: blob.pathname,
     });
   } catch (error) {
     console.error("[Backup] Misslyckades:", error);
-    return c.json({ message: "Backup failed.", fel: String(error) }, 500);
+    return c.json({ message: "Backup failed.", error: String(error) }, 500);
   }
 });

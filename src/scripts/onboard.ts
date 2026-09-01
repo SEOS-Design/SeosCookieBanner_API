@@ -39,13 +39,13 @@ import { websites, consentCategory, policyVersion } from "../db/schema";
 // ARGUMENT
 //========================================================================
 
-const arg = (namn: string): string | undefined =>
-  process.argv.find((a) => a.startsWith(`--${namn}=`))?.split("=").slice(1).join("=");
+const arg = (name: string): string | undefined =>
+  process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=").slice(1).join("=");
 
-const harFlagga = (namn: string): boolean => process.argv.includes(`--${namn}`);
+const hasFlag = (name: string): boolean => process.argv.includes(`--${name}`);
 
 /** www.brevenshus.se -> brevenshus. Samma regel som publish-design anvander. */
-const kortNamn = (domain: string): string =>
+const toShortName = (domain: string): string =>
   domain.replace(/^www\./, "").split(".")[0]!;
 
 // Basmallen som en ny sajt startar pa. Hojs den har far bara NYA sajter den -
@@ -55,7 +55,7 @@ const POLICY_VERSION = "1.0.3";
 // Kategorierna varje ny sajt far. Alla fyra som reglage fran start, med flit:
 // man kan aldrig gora fel genom att FRAGA om for mycket. Snava av senare, nar
 // cookie-skannern visat vad sajten faktiskt anvander (se driftmanualen 14).
-const KATEGORIER = [
+const CATEGORIES = [
   { key: "necessary", description: "Cookies necessary for basic website functionality.", is_required: true },
   { key: "functional", description: "Remembers your choices and settings.", is_required: false },
   { key: "analytics", description: "Used for visitor statistics and performance.", is_required: false },
@@ -67,7 +67,7 @@ const KATEGORIER = [
 const run = async () => {
   const domain = arg("domain");
   const name = arg("name");
-  const skarpt = harFlagga("run");
+  const live = hasFlag("run");
 
   if (!domain || !name) {
     console.error(
@@ -90,40 +90,40 @@ const run = async () => {
     process.exit(1);
   }
 
-  const kort = kortNamn(domain);
+  const shortName = toShortName(domain);
   const origin = `https://${domain}`;
-  const designfil = join("design", `${kort}.css`);
-  const policyfil = join("policies", "base", `${POLICY_VERSION}.html`);
+  const designFile = join("design", `${shortName}.css`);
+  const policyFile = join("policies", "base", `${POLICY_VERSION}.html`);
 
-  if (!existsSync(policyfil)) {
-    console.error(`\nHittar inte basmallen ${policyfil}.\n`);
+  if (!existsSync(policyFile)) {
+    console.error(`\nHittar inte basmallen ${policyFile}.\n`);
     process.exit(1);
   }
 
-  const befintlig = await db.query.websites.findFirst({
+  const existing = await db.query.websites.findFirst({
     where: eq(websites.domain, domain),
     columns: { id: true, site_key: true },
   });
 
-  console.log(`\n${domain}   (kortnamn: ${kort})\n`);
+  console.log(`\n${domain}   (kortnamn: ${shortName})\n`);
 
-  const planerat: string[] = [];
-  if (befintlig) {
-    planerat.push("  ~ sajten finns redan - kompletterar det som saknas");
+  const planned: string[] = [];
+  if (existing) {
+    planned.push("  ~ sajten finns redan - kompletterar det som saknas");
   } else {
-    planerat.push("  + websites-rad med ny site key");
+    planned.push("  + websites-rad med ny site key");
   }
-  planerat.push(`  + allowed_origins: ${origin}`);
-  planerat.push(`  + policyversion ${POLICY_VERSION} fran ${policyfil}`);
-  planerat.push(`  + ${KATEGORIER.length} kategorier, alla som reglage`);
-  planerat.push(
-    existsSync(designfil)
-      ? `  ~ ${designfil} finns redan - lamnas orord`
-      : `  + ${designfil} fran design/_mall.css`,
+  planned.push(`  + allowed_origins: ${origin}`);
+  planned.push(`  + policyversion ${POLICY_VERSION} fran ${policyFile}`);
+  planned.push(`  + ${CATEGORIES.length} kategorier, alla som reglage`);
+  planned.push(
+    existsSync(designFile)
+      ? `  ~ ${designFile} finns redan - lamnas orord`
+      : `  + ${designFile} fran design/_mall.css`,
   );
-  console.log(planerat.join("\n") + "\n");
+  console.log(planned.join("\n") + "\n");
 
-  if (!skarpt) {
+  if (!live) {
     console.log(
       "Torrkorning - ingenting skrivet. Lagg till --run nar du sett att det stammer.\n",
     );
@@ -136,9 +136,9 @@ const run = async () => {
   let websiteId: string;
   let siteKey: string;
 
-  if (befintlig) {
-    websiteId = befintlig.id;
-    siteKey = befintlig.site_key ?? "";
+  if (existing) {
+    websiteId = existing.id;
+    siteKey = existing.site_key ?? "";
     // En sajt utan nyckel ar en kvarleva fran fore B3. Ge den en.
     if (!siteKey) {
       siteKey = `pk_live_${randomBytes(16).toString("hex")}`;
@@ -146,11 +146,11 @@ const run = async () => {
     }
     // allowed_origins skrivs bara om den ar tom, sa en sajt med staging-adresser
     // inte tappar dem.
-    const rad = await db.query.websites.findFirst({
+    const row = await db.query.websites.findFirst({
       where: eq(websites.id, websiteId),
       columns: { allowed_origins: true },
     });
-    if (!rad?.allowed_origins?.length) {
+    if (!row?.allowed_origins?.length) {
       await db.update(websites).set({ allowed_origins: [origin] }).where(eq(websites.id, websiteId));
     }
   } else {
@@ -171,7 +171,7 @@ const run = async () => {
     .values({
       website_id: websiteId,
       version_label: POLICY_VERSION,
-      content_html: readFileSync(policyfil, "utf-8"),
+      content_html: readFileSync(policyFile, "utf-8"),
       valid_from: new Date(),
     })
     .onConflictDoNothing({
@@ -182,24 +182,24 @@ const run = async () => {
   //----------------------------------------------------------------
   // 3. Kategorierna
   //----------------------------------------------------------------
-  for (const kategori of KATEGORIER) {
+  for (const category of CATEGORIES) {
     await db
       .insert(consentCategory)
-      .values({ website_id: websiteId, ...kategori })
+      .values({ website_id: websiteId, ...category })
       .onConflictDoNothing({
         target: [consentCategory.website_id, consentCategory.key],
       });
   }
-  console.log(`[3/4] Kategorier ${KATEGORIER.map((k) => k.key).join(", ")}`);
+  console.log(`[3/4] Kategorier ${CATEGORIES.map((k) => k.key).join(", ")}`);
 
   //----------------------------------------------------------------
   // 4. Designfilen
   //----------------------------------------------------------------
-  if (!existsSync(designfil)) {
-    copyFileSync(join("design", "_mall.css"), designfil);
-    console.log(`[4/4] Design    ${designfil} skapad fran mallen`);
+  if (!existsSync(designFile)) {
+    copyFileSync(join("design", "_mall.css"), designFile);
+    console.log(`[4/4] Design    ${designFile} skapad fran mallen`);
   } else {
-    console.log(`[4/4] Design    ${designfil} fanns redan`);
+    console.log(`[4/4] Design    ${designFile} fanns redan`);
   }
 
   //----------------------------------------------------------------
@@ -218,7 +218,7 @@ ${"=".repeat(74)}
 2. OVERVAKNINGEN - lagg till i BANNERREPOTS tests/sajter.js:
 
    {
-     namn: '${kort}',
+     namn: '${shortName}',
      url: '${origin}/',
      skript: '/v1/banner.js',
      accepteraText: 'Acceptera alla',
@@ -278,13 +278,13 @@ ${"=".repeat(74)}
 6. KONTROLLERA, i den har ordningen:
 
    npm run granska -- ${origin}          (kontrast, i bannerrepot)
-   npm run skanna -- --full ${kort}      (vad sajten drar in, i bannerrepot)
+   npm run skanna -- --full ${shortName}      (vad sajten drar in, i bannerrepot)
    npm run overvaka                      (renderar bannern skarpt)
 
-7. DESIGNEN - fyll i ${designfil} och publicera:
+7. DESIGNEN - fyll i ${designFile} och publicera:
 
-   npm run publish-design -- --site=${kort}          (torrkorning)
-   npm run publish-design -- --site=${kort} --run    (skarpt)
+   npm run publish-design -- --site=${shortName}          (torrkorning)
+   npm run publish-design -- --site=${shortName} --run    (skarpt)
 
    Har kunden ingen egen formgivning: radera filen, sa kor de basvardena.
 
@@ -294,7 +294,7 @@ ${"=".repeat(74)}
   process.exit(0);
 };
 
-run().catch((fel) => {
-  console.error("\nOnboardingen misslyckades:", fel);
+run().catch((error) => {
+  console.error("\nOnboardingen misslyckades:", error);
   process.exit(1);
 });
