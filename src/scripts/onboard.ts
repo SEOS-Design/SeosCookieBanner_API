@@ -238,6 +238,33 @@ ${"=".repeat(74)}
    (bokningskalendrar, YouTube, kartor, chatt). De sitter ALDRIG pa
    startsidan, sa cookie-skannern ser dem inte.
 
+   ⛔ HALL INTE TILLBAKA NAGOT REFLEXMASSIGT. Fyra fragor, i ordning:
+
+     1. Sparar den?                     Nej -> gor ingenting (cal.com)
+     2. Bad besokaren om den?           Ja  -> ladda vid klicket i stallet
+     3. Gar sidan att anvanda utan den? Nej -> manskligt beslut
+     4. Syns det, och ett klick vidare? Nej -> gor det inte
+
+   En besokare som inte kan boka ett mote eller se en video ar ett samre
+   utfall an en cookie vi kunde ha stoppat. Ett bokningsformulare ska
+   ALDRIG sparras bakom ett cookieval.
+
+   Ska nagot hallas tillbaka - sa har markeras det pa kundens sajt:
+
+     <script type="text/plain" data-seos-consent="marketing" src="..."></script>
+
+     <iframe data-seos-consent="marketing"
+             data-seos-src="https://www.youtube.com/embed/xxxx"
+             width="640" height="360"></iframe>
+
+   ⚠️ For skriptet ar det type="text/plain" som haller tillbaka det, inte
+   attributet. For iframen maste adressen FLYTTAS fran src till
+   data-seos-src. Bannern sager ifran i konsolen om det blivit fel, men
+   ett skript som redan korrt gar inte att ta tillbaka.
+
+   Laddar sajtens EGEN kod nagot vid klick finns window.SEOS.hasConsent()
+   och window.SEOS.onConsentChange(). Hela rutinen i driftmanualen 15.
+
 5. ⏳ VANTA FEM MINUTER innan du testar ett samtycke.
 
    API:t cachar listan over tillatna origins i minnet i fem minuter

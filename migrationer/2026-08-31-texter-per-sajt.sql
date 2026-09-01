@@ -81,18 +81,34 @@ ALTER TABLE websites
 --
 -- Först när bannern som läser fältet ligger ute, och en sajt i taget.
 --
--- ⚠️ Hur ifyllningen ska gå till är ÄNNU INTE BESTÄMT. Två vägar, och valet
--- hör ihop med hur policyerna och designen redan fungerar:
+-- ✅ BESLUTAT 2026-08-31 (Björn): en fil i repot plus ett publiceringskommando,
+-- som design/ och policies/ redan fungerar.
 --
---   (a) SQL direkt mot databasen. Enklast, men då finns texten bara där —
---       ingen historik, ingen diff att granska, inget sätt att se hur en kunds
---       banner är tänkt att låta.
---   (b) En fil i repot plus ett publiceringskommando, som design/ och
---       policies/. FILEN ÄR SANNINGEN, DATABASEN ÄR KOPIAN. Det mönstret
---       valdes en gång av ett konkret skäl: den svenska policytexten låg bara
---       i databasen, och seed-skriptet hade kvar gammal engelsk text.
+--   texts/<kund>.json
+--   npm run publish-texts -- --site=<kund>          (torrkörning)
+--   npm run publish-texts -- --site=<kund> --run    (skarpt)
 --
--- Kolumnen ser likadan ut oavsett vilket, så migreringen väntar inte på svaret.
+-- FILEN ÄR SANNINGEN, DATABASEN ÄR KOPIAN. Skälet är konkret och kommer från
+-- det här projektet: den svenska policytexten låg en gång bara i databasen, och
+-- seed-skriptet hade kvar gammal engelsk text. Ligger texten bara i databasen
+-- finns ingen historik, ingen diff att granska och inget sätt att se hur en
+-- kunds banner är tänkt att låta.
+--
+-- SQL direkt valdes bort trots att det är enklare, av precis det skälet.
+--
+-- ⚠️ Reglerna ska ligga i KOMMANDOT, inte i kommentarer i filen. JSON kan inte
+-- innehålla kommentarer, men det är inte hela skälet: seed.ts skrev ut en
+-- inaktuell instruktion om ALLOWED_ORIGINS i månader utan att någon märkte det.
+-- Instruktioner i kod ruttnar. En kontroll som vägrar gör det inte.
+--
+-- Kommandot ska alltså avvisa, med förklaring: text som innehåller HTML, okända
+-- kategorinamn, okända fältnamn, necessary.notice, och text som redan är lika
+-- med bannerns standard. Samma roll som geometrin har i publish-design.
+--
+-- ⚠️ Bygger ni senare ett admin-gränssnitt (D4) måste det skriva TILLBAKA till
+-- filen, annars driver fil och databas isär. Samma villkor som för designen.
+--
+-- Kommandot är inte byggt än. Tills det finns fylls ingenting i.
 
 
 -- ---------------------------------------------------------------------------
