@@ -11,6 +11,7 @@
     "publish-policy": "ts-node src/scripts/publishPolicy.ts",
     "policy-status": "ts-node src/scripts/policyStatus.ts",
     "aterstall": "ts-node src/scripts/restore.ts",
+    "publish-texts": "ts-node src/scripts/publishTexts.ts",
     "publish-design": "ts-node src/scripts/publishDesign.ts",
     "onboard": "ts-node src/scripts/onboard.ts"
   },
