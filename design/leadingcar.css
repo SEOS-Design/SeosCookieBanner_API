@@ -1,0 +1,77 @@
+/* Leading Car Service — www.leadingcar.se
+ *
+ * Ljus banner som foljer sajtens egen yta. Vardena ar hamtade ur deras
+ * globals.css, inte gissade:
+ *
+ *   --color-primary      #941413   accent
+ *   --color-primary-dark #6f0005   accent vid hovring
+ *   --color-text         #2c2c2c   brodtext
+ *   --color-text-muted   #6b6b6b   dampad text
+ *   --color-surface      #ffffff   bakgrund
+ *   --color-surface-warm #f5f5f5   kategorirader
+ *   --color-border       #e5e0db   kanter
+ *
+ * Standarddesignen ar mork med gra accent. Nastan allt nedan avviker darfor.
+ */
+
+:root {
+  /* --- Bakgrund och text ------------------------------------------- */
+  --bg-main: #ffffff;
+  --text-main: #2c2c2c;
+  --text-muted: #6b6b6b;      /* 5,3:1 mot vitt - over kravet 4,5:1 */
+  --bg-muted: #f5f5f5;
+
+  /* --- Accent ------------------------------------------------------- */
+  /* "Acceptera alla" och rutan bakom kakikonen. Vit text pa #941413 ger
+     8,9:1, alltsa god marginal. */
+  --accent-color: #941413;
+  --accent-hover: #6f0005;
+  --btn-accent-text: #ffffff;
+
+  /* --- Kanter ------------------------------------------------------- */
+  --border-color: #e5e0db;
+  --btn-border: #cfc7c0;      /* morkare an deras kant, annars syns inte
+                                 sekundarknappen mot vit bakgrund */
+
+  /* --- Knappar ------------------------------------------------------ */
+  /* Standardvardena ar morka och skulle bli svarta plattor pa en ljus
+     banner. Har blir de ljusa ytor med kant. */
+  --bg-dark-btn: #f5f5f5;
+  --bg-customize-btn: #f5f5f5;
+  --btn-hover-filter: brightness(0.96);
+  --btn-secondary-hover-bg: #eae7e3;
+  --btn-secondary-hover-filter: brightness(0.98);
+
+  /* --- Ikon och reglage --------------------------------------------- */
+  /* Ikonrutan foljer brevenshus monster: en dampad ruta i sajtens egen
+     yta, med kakan i accentfargen. Rod ruta blev for tung bredvid den roda
+     "Acceptera alla"-knappen. Rott pa #eae7e3 ger 7,2:1 - kravet for
+     ikoner ar 3:1. */
+  --logo-color: #941413;
+  --bg-logo-wrapper: #eae7e3;
+  --toggle-switch-bg: #cfc7c0; /* av-lage. Ljusare an sa syns inte den vita
+                                  cirkeln */
+  --toggle-circle: #ffffff;
+
+  /* --- Detaljer ------------------------------------------------------ */
+  --scrollbar-thumb: #6b6b6b;
+  --policy-link-color: #941413;
+  --badge-text-color: #ffffff;
+  --fokus-ring: 2px solid #941413;
+
+  /* --- Typsnitt ------------------------------------------------------ */
+  /* Bannern laddar aldrig egna typsnitt. Den arver sajtens variabler
+     genom skuggan - General Sans for rubriker, Poppins for brodtext. */
+  --main-font: var(--font-body);
+  --header-font: var(--font-heading);
+
+  /* --- Radier --------------------------------------------------------- */
+  /* Sajtens knappar anvander var(--border-radius) = 8px. Bannerns basvarde
+     ar 12px, sa de matchade inte. .btn--pill (helt rund) finns men anvands
+     pa ett enda stalle och ar alltsa inte sajtens sprak.
+     Ytterhornet halls nagot mjukare an knapparna, som deras kort:
+     kontaktkorten ar 10px, sektionsmedian 14px. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
