@@ -210,12 +210,42 @@ ${"=".repeat(74)}
 KVAR ATT GORA FOR HAND
 ${"=".repeat(74)}
 
-1. SCRIPTTAGGEN - klistra in i kundens <head>:
+ORDNINGEN I KUNDENS <head> - fyra saker, i den har foljden:
+
+  1. Vaktsnutten          allra forst, fore allt
+  2. Consent default
+  3. GTM eller gtag
+  4. Bannerns scriptrad
+
+⚠️ INGET DESIGNBLOCK. Designen kommer fran databasen sedan C1 steg 1.
+   Klistras ett designblock in overstyr det databasen, och framtida andringar
+   via publish-design nar aldrig fram. Aldre anteckningar sager nagot annat -
+   de ar skrivna fore 2026-08-21.
+
+1. VAKTSNUTTEN - allra forst i kundens <head>:
+
+   Kor 'npm run build' i BANNERREPOT, kopiera hela guard-snippet.html och
+   klistra in innehallet overst. Cirka 900 tecken inline, inget natverksanrop.
+   Identisk for alla kunder - den bar inget sajtspecifikt.
+
+   ⚠️ ORDNINGEN AR HELA POANGEN. Vakten fangar skript som skapas av
+   JavaScript och maste hinna fore dem. Ligger den efter en tredjepart som
+   laddar sig sjalv har den missat sitt enda jobb.
+
+   Vakten slapper ALDRIG fram nagot sjalv - den haller tillbaka och lagger
+   undan. Bannern slapper fram nar besokaren sagt ja. Uteblir bannern forblir
+   det tillbakahallet, vilket ar det sakra felet.
+
+   Kontrollera efterat med 'npm run overvaka' i bannerrepot - den skriver
+   'vakt' eller 'ingen vakt' per sajt. Ingen devtools behovs.
+   Rutinen i driftmanualen 16.
+
+2. SCRIPTTAGGEN - i kundens <head>, efter consent default och GTM/gtag:
 
    <script src="https://seos-cookie-banner.vercel.app/v1/banner.js"
            data-site-key="${siteKey}" async></script>
 
-2. OVERVAKNINGEN - lagg till i BANNERREPOTS tests/sajter.js:
+3. OVERVAKNINGEN - lagg till i BANNERREPOTS tests/sajter.js:
 
    {
      namn: '${shortName}',
@@ -229,12 +259,12 @@ ${"=".repeat(74)}
    ⚠️ Hoppas det har over blir sajten ALDRIG overvakad, och en dod banner
    upptacks av en kund i stallet for av oss.
 
-3. WEBFLOW-FALLAN - ar sajten i Webflow: Apps & Integrations -> Google tag
+4. WEBFLOW-FALLAN - ar sajten i Webflow: Apps & Integrations -> Google tag
    ska vara TOM. Dess snutt laddas fore all anpassad huvudkod, sa GA satter
    cookies fore samtycke och ordningen gar inte att styra. Ladda GA fran
    anpassad huvudkod i stallet, efter consent-blocket.
 
-4. UNDERSIDORNA - oppna kontaktsida och artikelsidor och leta inbaddningar
+5. UNDERSIDORNA - oppna kontaktsida och artikelsidor och leta inbaddningar
    (bokningskalendrar, YouTube, kartor, chatt). De sitter ALDRIG pa
    startsidan, sa cookie-skannern ser dem inte.
 
@@ -265,7 +295,7 @@ ${"=".repeat(74)}
    Laddar sajtens EGEN kod nagot vid klick finns window.SEOS.hasConsent()
    och window.SEOS.onConsentChange(). Hela rutinen i driftmanualen 15.
 
-5. ⏳ VANTA FEM MINUTER innan du testar ett samtycke.
+6. ⏳ VANTA FEM MINUTER innan du testar ett samtycke.
 
    API:t cachar listan over tillatna origins i minnet i fem minuter
    (CACHE_MS i src/index.ts). Sajtens adress finns i databasen redan nu, men
@@ -275,13 +305,13 @@ ${"=".repeat(74)}
    Det ar INTE ett fel och det gar over av sig sjalvt. Men testar du direkt
    ser det ut som att uppsattningen misslyckats.
 
-6. KONTROLLERA, i den har ordningen:
+7. KONTROLLERA, i den har ordningen:
 
    npm run granska -- ${origin}          (kontrast, i bannerrepot)
    npm run skanna -- --full ${shortName}      (vad sajten drar in, i bannerrepot)
    npm run overvaka                      (renderar bannern skarpt)
 
-7. DESIGNEN - fyll i ${designFile} och publicera:
+8. DESIGNEN - fyll i ${designFile} och publicera:
 
    npm run publish-design -- --site=${shortName}          (torrkorning)
    npm run publish-design -- --site=${shortName} --run    (skarpt)
