@@ -107,6 +107,10 @@ const run = async () => {
 
   console.log(`\n${domain}   (kortnamn: ${shortName})\n`);
 
+  // Vid torrkorning finns ingen nyckel an for en NY sajt. En befintlig sajt
+  // visar sin riktiga, sa raden gar att kopiera direkt.
+  let siteKey: string = existing?.site_key ?? "<skapas nar du kor --run>";
+
   const planned: string[] = [];
   if (existing) {
     planned.push("  ~ sajten finns redan - kompletterar det som saknas");
@@ -123,89 +127,10 @@ const run = async () => {
   );
   console.log(planned.join("\n") + "\n");
 
-  if (!live) {
-    console.log(
-      "Torrkorning - ingenting skrivet. Lagg till --run nar du sett att det stammer.\n",
-    );
-    process.exit(0);
-  }
-
-  //----------------------------------------------------------------
-  // 1. Sajten
-  //----------------------------------------------------------------
-  let websiteId: string;
-  let siteKey: string;
-
-  if (existing) {
-    websiteId = existing.id;
-    siteKey = existing.site_key ?? "";
-    // En sajt utan nyckel ar en kvarleva fran fore B3. Ge den en.
-    if (!siteKey) {
-      siteKey = `pk_live_${randomBytes(16).toString("hex")}`;
-      await db.update(websites).set({ site_key: siteKey }).where(eq(websites.id, websiteId));
-    }
-    // allowed_origins skrivs bara om den ar tom, sa en sajt med staging-adresser
-    // inte tappar dem.
-    const row = await db.query.websites.findFirst({
-      where: eq(websites.id, websiteId),
-      columns: { allowed_origins: true },
-    });
-    if (!row?.allowed_origins?.length) {
-      await db.update(websites).set({ allowed_origins: [origin] }).where(eq(websites.id, websiteId));
-    }
-  } else {
-    siteKey = `pk_live_${randomBytes(16).toString("hex")}`;
-    const [ny] = await db
-      .insert(websites)
-      .values({ name, domain, site_key: siteKey, allowed_origins: [origin] })
-      .returning({ id: websites.id });
-    websiteId = ny!.id;
-  }
-  console.log(`[1/4] Sajt      ${websiteId}`);
-
-  //----------------------------------------------------------------
-  // 2. Policyn
-  //----------------------------------------------------------------
-  await db
-    .insert(policyVersion)
-    .values({
-      website_id: websiteId,
-      version_label: POLICY_VERSION,
-      content_html: readFileSync(policyFile, "utf-8"),
-      valid_from: new Date(),
-    })
-    .onConflictDoNothing({
-      target: [policyVersion.website_id, policyVersion.version_label],
-    });
-  console.log(`[2/4] Policy    ${POLICY_VERSION}`);
-
-  //----------------------------------------------------------------
-  // 3. Kategorierna
-  //----------------------------------------------------------------
-  for (const category of CATEGORIES) {
-    await db
-      .insert(consentCategory)
-      .values({ website_id: websiteId, ...category })
-      .onConflictDoNothing({
-        target: [consentCategory.website_id, consentCategory.key],
-      });
-  }
-  console.log(`[3/4] Kategorier ${CATEGORIES.map((k) => k.key).join(", ")}`);
-
-  //----------------------------------------------------------------
-  // 4. Designfilen
-  //----------------------------------------------------------------
-  if (!existsSync(designFile)) {
-    copyFileSync(join("design", "_mall.css"), designFile);
-    console.log(`[4/4] Design    ${designFile} skapad fran mallen`);
-  } else {
-    console.log(`[4/4] Design    ${designFile} fanns redan`);
-  }
-
-  //----------------------------------------------------------------
-  // Det som INTE gar att automatisera
-  //----------------------------------------------------------------
-  console.log(`
+  // Checklistan ritas fran en funktion sa att BADA vagarna kan visa den.
+  // Torrkorningen visade den inte forut, vilket var bakvant: stegen gick
+  // inte att lasa forran sajten redan var skapad i produktion.
+  const manualSteps = () => `
 ${"=".repeat(74)}
 KVAR ATT GORA FOR HAND
 ${"=".repeat(74)}
@@ -224,9 +149,13 @@ ORDNINGEN I KUNDENS <head> - fyra saker, i den har foljden:
 
 1. VAKTSNUTTEN - allra forst i kundens <head>:
 
-   Kor 'npm run build' i BANNERREPOT, kopiera hela guard-snippet.html och
-   klistra in innehallet overst. Cirka 900 tecken inline, inget natverksanrop.
+   Oppna guard-snippet.html i BANNERREPOT och kopiera innehallet. Klistra
+   in det overst i <head>. Cirka 900 tecken inline, inget natverksanrop.
    Identisk for alla kunder - den bar inget sajtspecifikt.
+
+   Filen ar byggd och committad, sa den gar att kopiera direkt. Behover du
+   bygga om den: 'npm run build' i bannerrepot. CI kontrollerar vid varje
+   push att den ar i synk med banner-src/guard.js.
 
    ⚠️ ORDNINGEN AR HELA POANGEN. Vakten fangar skript som skapas av
    JavaScript och maste hinna fore dem. Ligger den efter en tredjepart som
@@ -319,7 +248,91 @@ ORDNINGEN I KUNDENS <head> - fyra saker, i den har foljden:
    Har kunden ingen egen formgivning: radera filen, sa kor de basvardena.
 
 ${"=".repeat(74)}
-`);
+`;
+
+  if (!live) {
+    console.log(manualSteps());
+    console.log(
+      "TORRKORNING - INGENTING AR SKRIVET.\n\n" +
+        "Stegen ovan ar de som vantar efter att du kort skarpt. For en NY sajt\n" +
+        "finns ingen site key an - den skapas av --run och skrivs ut da.\n\n" +
+        "Lagg till --run nar du sett att det stammer.\n",
+    );
+    process.exit(0);
+  }
+
+  //----------------------------------------------------------------
+  // 1. Sajten
+  //----------------------------------------------------------------
+  let websiteId: string;
+
+  if (existing) {
+    websiteId = existing.id;
+    siteKey = existing.site_key ?? "";
+    // En sajt utan nyckel ar en kvarleva fran fore B3. Ge den en.
+    if (!siteKey) {
+      siteKey = `pk_live_${randomBytes(16).toString("hex")}`;
+      await db.update(websites).set({ site_key: siteKey }).where(eq(websites.id, websiteId));
+    }
+    // allowed_origins skrivs bara om den ar tom, sa en sajt med staging-adresser
+    // inte tappar dem.
+    const row = await db.query.websites.findFirst({
+      where: eq(websites.id, websiteId),
+      columns: { allowed_origins: true },
+    });
+    if (!row?.allowed_origins?.length) {
+      await db.update(websites).set({ allowed_origins: [origin] }).where(eq(websites.id, websiteId));
+    }
+  } else {
+    siteKey = `pk_live_${randomBytes(16).toString("hex")}`;
+    const [ny] = await db
+      .insert(websites)
+      .values({ name, domain, site_key: siteKey, allowed_origins: [origin] })
+      .returning({ id: websites.id });
+    websiteId = ny!.id;
+  }
+  console.log(`[1/4] Sajt      ${websiteId}`);
+
+  //----------------------------------------------------------------
+  // 2. Policyn
+  //----------------------------------------------------------------
+  await db
+    .insert(policyVersion)
+    .values({
+      website_id: websiteId,
+      version_label: POLICY_VERSION,
+      content_html: readFileSync(policyFile, "utf-8"),
+      valid_from: new Date(),
+    })
+    .onConflictDoNothing({
+      target: [policyVersion.website_id, policyVersion.version_label],
+    });
+  console.log(`[2/4] Policy    ${POLICY_VERSION}`);
+
+  //----------------------------------------------------------------
+  // 3. Kategorierna
+  //----------------------------------------------------------------
+  for (const category of CATEGORIES) {
+    await db
+      .insert(consentCategory)
+      .values({ website_id: websiteId, ...category })
+      .onConflictDoNothing({
+        target: [consentCategory.website_id, consentCategory.key],
+      });
+  }
+  console.log(`[3/4] Kategorier ${CATEGORIES.map((k) => k.key).join(", ")}`);
+
+  //----------------------------------------------------------------
+  // 4. Designfilen
+  //----------------------------------------------------------------
+  if (!existsSync(designFile)) {
+    copyFileSync(join("design", "_mall.css"), designFile);
+    console.log(`[4/4] Design    ${designFile} skapad fran mallen`);
+  } else {
+    console.log(`[4/4] Design    ${designFile} fanns redan`);
+  }
+
+  console.log(manualSteps());
 
   process.exit(0);
 };
