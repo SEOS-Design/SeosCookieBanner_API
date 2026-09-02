@@ -13,7 +13,8 @@
     "aterstall": "ts-node src/scripts/restore.ts",
     "publish-texts": "ts-node src/scripts/publishTexts.ts",
     "publish-design": "ts-node src/scripts/publishDesign.ts",
-    "onboard": "ts-node src/scripts/onboard.ts"
+    "onboard": "ts-node src/scripts/onboard.ts",
+    "visitor-data": "ts-node src/scripts/visitorData.ts"
   },
   "keywords": [],
   "author": "",
