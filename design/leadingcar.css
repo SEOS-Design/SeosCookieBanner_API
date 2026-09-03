@@ -38,7 +38,14 @@
      banner. Har blir de ljusa ytor med kant. */
   --bg-dark-btn: #f5f5f5;
   --bg-customize-btn: #f5f5f5;
-  --btn-hover-filter: brightness(0.96);
+
+  /* Hovring pa de roda knapparna. Deras egen .btn--primary gar fran #941413
+     till #6f0005, alltsa markbart morkare - brightness(0.8) ger ungefar samma
+     upplevelse. brightness(0.96) som stod har forst syntes inte alls pa rott.
+     ⚠️ --accent-hover ar en DOD VARIABEL i bannern: den valideras och
+     accepteras av publish-design men ingen CSS-regel laser den. Hovringen
+     styrs enbart harifran. Se todo om att koppla den. */
+  --btn-hover-filter: brightness(0.8);
   --btn-secondary-hover-bg: #eae7e3;
   --btn-secondary-hover-filter: brightness(0.98);
 
@@ -54,6 +61,10 @@
   --toggle-circle: #ffffff;
 
   /* --- Detaljer ------------------------------------------------------ */
+  /* Basvardets toning ar gjord for MORK bakgrund och blir en gra smuts pa en
+     ljus banner. Mallen sager det rakt ut: satt none pa en ljus banner.
+     Rullningslisten visar anda att det finns mer att lasa. */
+  --scroll-gradient: none;
   --scrollbar-thumb: #6b6b6b;
   --policy-link-color: #941413;
   --badge-text-color: #ffffff;
@@ -71,7 +82,14 @@
      pa ett enda stalle och ar alltsa inte sajtens sprak.
      Ytterhornet halls nagot mjukare an knapparna, som deras kort:
      kontaktkorten ar 10px, sektionsmedian 14px. */
-  --radius-sm: 6px;
+  /* --radius-sm lamnas pa basvardet. Den styr ikonrutan och tabellramen -
+     INTE reglagen, trots vad mallens kommentar sager (uppmatt 2026-09-02:
+     style.css rad 241, 519 och 562).
+
+     ⚠️ REGLAGEN DELAR --radius-md MED KNAPPARNA (style.css rad 284 och 409).
+     De gar alltsa inte att skilja at idag: satter man knapparna till sajtens
+     8px foljer reglagen med. Bjorn vill ha dem isar - det kraver en egen
+     variabel i bannern och ligger som todo. */
   --radius-md: 8px;
   --radius-lg: 12px;
 }
