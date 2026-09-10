@@ -174,7 +174,23 @@ ORDNINGEN I KUNDENS <head> - fyra saker, i den har foljden:
    <script src="https://seos-cookie-banner.vercel.app/v1/banner.js"
            data-site-key="${siteKey}" async></script>
 
-3. OVERVAKNINGEN - lagg till i BANNERREPOTS tests/sajter.js:
+3. FOTLANKARNA - tva lankar i kundens sidfot:
+
+   <a href="#" id="open-cookie-settings">Cookieinstallningar</a>
+   <a href="#" id="open-cookie-policy">Cookiepolicy</a>
+
+   Id:na ar fastena. Text, ordning och formgivning bestammer du - bannern ror
+   bara klicket. Den forsta oppnar installningarna, den andra oppnar policyn.
+
+   Bannern lyssnar med event delegation pa document, sa det spelar ingen roll
+   NAR lankarna skapas. En React-sidfot som ritas om vid navigering fungerar
+   lika bra som en statisk. Fore 2026-09-10 band bannern lyssnaren en gang vid
+   init, och da forsvann den tyst pa en sajt som ritade om sin sidfot.
+
+   ⚠️ Hoppas det har over har besokaren ingen vag tillbaka till sitt val.
+   Att kunna andra sig i efterhand ar ett krav, inte en trevlighet.
+
+4. OVERVAKNINGEN - lagg till i BANNERREPOTS tests/sajter.js:
 
    {
      namn: '${shortName}',
@@ -188,12 +204,12 @@ ORDNINGEN I KUNDENS <head> - fyra saker, i den har foljden:
    ⚠️ Hoppas det har over blir sajten ALDRIG overvakad, och en dod banner
    upptacks av en kund i stallet for av oss.
 
-4. WEBFLOW-FALLAN - ar sajten i Webflow: Apps & Integrations -> Google tag
+5. WEBFLOW-FALLAN - ar sajten i Webflow: Apps & Integrations -> Google tag
    ska vara TOM. Dess snutt laddas fore all anpassad huvudkod, sa GA satter
    cookies fore samtycke och ordningen gar inte att styra. Ladda GA fran
    anpassad huvudkod i stallet, efter consent-blocket.
 
-5. UNDERSIDORNA - oppna kontaktsida och artikelsidor och leta inbaddningar
+6. UNDERSIDORNA - oppna kontaktsida och artikelsidor och leta inbaddningar
    (bokningskalendrar, YouTube, kartor, chatt). De sitter ALDRIG pa
    startsidan, sa cookie-skannern ser dem inte.
 
@@ -224,7 +240,7 @@ ORDNINGEN I KUNDENS <head> - fyra saker, i den har foljden:
    Laddar sajtens EGEN kod nagot vid klick finns window.SEOS.hasConsent()
    och window.SEOS.onConsentChange(). Hela rutinen i driftmanualen 15.
 
-6. ⏳ VANTA FEM MINUTER innan du testar ett samtycke.
+7. ⏳ VANTA FEM MINUTER innan du testar ett samtycke.
 
    API:t cachar listan over tillatna origins i minnet i fem minuter
    (CACHE_MS i src/index.ts). Sajtens adress finns i databasen redan nu, men
@@ -234,13 +250,13 @@ ORDNINGEN I KUNDENS <head> - fyra saker, i den har foljden:
    Det ar INTE ett fel och det gar over av sig sjalvt. Men testar du direkt
    ser det ut som att uppsattningen misslyckats.
 
-7. KONTROLLERA, i den har ordningen:
+8. KONTROLLERA, i den har ordningen:
 
    npm run granska -- ${origin}          (kontrast, i bannerrepot)
    npm run skanna -- --full ${shortName}      (vad sajten drar in, i bannerrepot)
    npm run overvaka                      (renderar bannern skarpt)
 
-8. DESIGNEN - fyll i ${designFile} och publicera:
+9. DESIGNEN - fyll i ${designFile} och publicera:
 
    npm run publish-design -- --site=${shortName}          (torrkorning)
    npm run publish-design -- --site=${shortName} --run    (skarpt)

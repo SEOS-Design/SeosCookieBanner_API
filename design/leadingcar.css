@@ -40,12 +40,12 @@
   --bg-customize-btn: #f5f5f5;
 
   /* Hovring pa de roda knapparna. Deras egen .btn--primary gar fran #941413
-     till #6f0005, alltsa markbart morkare - brightness(0.8) ger ungefar samma
-     upplevelse. brightness(0.96) som stod har forst syntes inte alls pa rott.
-     ⚠️ --accent-hover ar en DOD VARIABEL i bannern: den valideras och
-     accepteras av publish-design men ingen CSS-regel laser den. Hovringen
-     styrs enbart harifran. Se todo om att koppla den. */
-  --btn-hover-filter: brightness(0.8);
+     till #6f0005, alltsa markbart morkare.
+     Fram till 2026-09-10 var --accent-hover en dod variabel i bannern, och
+     brightness(0.8) var en APPROXIMATION av det farghoppet. Nu laser bannern
+     --accent-hover, sa knappen far sajtens exakta farg - och filtret maste
+     darfor vara none, annars ljusas den exakta fargen upp igen. */
+  --btn-hover-filter: none;
   --btn-secondary-hover-bg: #eae7e3;
   --btn-secondary-hover-filter: brightness(0.98);
 

@@ -35,7 +35,10 @@
   /* ---------------------------------------------------------------- */
 
   /* --accent-color: #686868; */     /* "Acceptera alla"-knappen och ikonrutan */
-  /* --accent-hover: #6366f1; */     /* accentfargen vid hovring */
+  /* --accent-hover: #6366f1; */     /* accentknapparnas EXAKTA hoverfarg.
+     Satt den bara om du vet sajtens riktiga hoverfarg - satt da ocksa
+     --btn-hover-filter: none, annars laggs ljusningen ovanpa. Lamnas den
+     osatt far knappen sin egen farg med filtret, vilket ar basbeteendet. */
   /* --border-color: rgba(255,255,255,0.2); */  /* bannerns ytterkant */
   /* --btn-border: rgba(255,255,255,0.5); */    /* knapparnas kant */
 
@@ -46,7 +49,8 @@
   /* --btn-accent-text: #ffffff; */  /* text PA den accentfargade knappen */
   /* --bg-dark-btn: #111827; */      /* morka knappar */
   /* --bg-customize-btn: #1d1d1d; */ /* "Anpassa"-knappens bakgrund */
-  /* --btn-hover-filter: brightness(1.2); */       /* ljusning vid hovring */
+  /* --btn-hover-filter: brightness(1.2); */       /* ljusning vid hovring.
+     Satt none om du satt --accent-hover ovan. */
   /* --btn-secondary-hover-bg: #1d1d1d; */         /* sekundarknapp vid hovring */
   /* --btn-secondary-hover-filter: brightness(1.2); */
 
@@ -102,9 +106,14 @@
   /* RADIER                                                             */
   /* ---------------------------------------------------------------- */
 
-  /* --radius-sm: 8px; */    /* reglage och sma element */
-  /* --radius-md: 12px; */   /* knappar och kategorirader */
-  /* --radius-lg: 16px; */   /* sjalva bannerns horn */
+  /* --radius-sm: 8px; */      /* ikonrutan, policyns ikonruta, tabellramen.
+     ⚠️ Stod tidigare "reglage och sma element" har - reglagen har ALDRIG
+     styrts av radius-sm. De lag pa radius-md till 2026-09-10. */
+  /* --radius-md: 12px; */     /* knappar och kategorirader */
+  /* --radius-lg: 16px; */     /* sjalva bannerns horn */
+  /* --toggle-radius: 12px; */ /* reglagen, egen sedan 2026-09-10. Osatt
+     foljer de radius-md, precis som forut. 12px pa ett 24px hogt reglage
+     ar exakt halva hojden, alltsa en helt rund pill. */
 }
 
 /* ==================================================================== */

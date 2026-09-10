@@ -166,6 +166,9 @@ const ALLOWED_VARIABLES = new Set([
   "radius-sm",
   "radius-md",
   "radius-lg",
+  // Reglagets egen radie. Lag tidigare pa radius-md, som ocksa styr
+  // knapparna - kantiga knappar gav kantiga reglage pa kopet.
+  "toggle-radius",
 ]);
 
 // Vardet skrivs med style.setProperty(), alltsa in i CSS-motorn som ett

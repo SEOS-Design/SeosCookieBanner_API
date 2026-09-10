@@ -41,6 +41,10 @@
   --btn-secondary-hover-bg: rgba(89, 74, 60, 0.12);
   /* Ingen ljusning vid hovring — pa en ljus bakgrund ser den ut som en bugg */
   --btn-secondary-hover-filter: none;
+  /* Accentknapparna hovrar till --accent-hover ovan sedan 2026-09-10, da
+     variabeln kopplades till en CSS-regel. Filtret maste da vara none:
+     annars ljusas den exakta fargen upp och blir en tredje farg. */
+  --btn-hover-filter: none;
 
   /* Reglage */
   --toggle-switch-bg: #d8cdb8;
