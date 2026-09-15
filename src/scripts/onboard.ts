@@ -176,11 +176,24 @@ ORDNINGEN I KUNDENS <head> - fyra saker, i den har foljden:
 
 3. FOTLANKARNA - tva lankar i kundens sidfot:
 
-   <a href="#" id="open-cookie-settings">Cookieinstallningar</a>
+   <a href="#" id="open-cookie-settings">Cookie inställningar</a>
    <a href="#" id="open-cookie-policy">Cookiepolicy</a>
+
+   Engelsk sajt: "Cookie settings" och "Cookiepolicy". Namnregeln (beslutad
+   2026-09-10): installningar i TVA ord, policy i ETT ord, pa bada spraken.
 
    Id:na ar fastena. Text, ordning och formgivning bestammer du - bannern ror
    bara klicket. Den forsta oppnar installningarna, den andra oppnar policyn.
+
+   GAR DET INTE ATT SATTA ETT ID - ett CMS som Sanity har inget falt for det,
+   eller samma lank behovs tva ganger pa en sida - fungerar ADRESSEN lika bra:
+
+   <a href="#open-cookie-settings">Cookie inställningar</a>
+   <a href="#open-cookie-policy">Cookiepolicy</a>
+
+   Ett id far bara finnas en gang per sida, en adress hur manga ganger som
+   helst. Sa gor leadingcar: lankarna i sidfoten och en till i texten pa
+   integritetspolicyn.
 
    Bannern lyssnar med event delegation pa document, sa det spelar ingen roll
    NAR lankarna skapas. En React-sidfot som ritas om vid navigering fungerar
