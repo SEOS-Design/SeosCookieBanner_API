@@ -1,0 +1,75 @@
+/* Tillväxtstöd — www.tillvaxtstod.se
+ *
+ * Återskapar bannerns utseende från före bytet till /v1/banner.js. Då låg
+ * designen som ett eget block i kundens globals.css ("Cookie banner —
+ * Tillväxtstöd brand overrides"), men den nya bannern ligger i Shadow DOM, dit
+ * sajtens CSS inte når. Värdena är hämtade ur det blocket och uppmätta på
+ * skarpa sajten 2026-09-16, inte gissade:
+ *
+ *   --btn-primary-bg     #f9c80e   gul accent
+ *   --btn-primary-hover  #e0b40d   accent vid hovring
+ *   --btn-primary-color  #111827   text på gult
+ *   --color-primary      #0f1d3a   mörkblå
+ *   --color-primary-mid  #2563eb   länkblå
+ *   --color-text         #111827   brödtext
+ *   --color-text-muted   #4b5563   dämpad text
+ *   --radius-button      24px      knappar
+ *
+ * MEDVETEN SKILLNAD MOT FÖRR:
+ *   - "Endast nödvändiga" var vit med mörkblå ram och är nu gul, som
+ *     "Acceptera alla". Björns beslut 2026-09-16: båda valen i primärfärgen,
+ *     jämbördiga — ett nej ska inte göras mindre framträdande än ett ja.
+ *
+ * GÅR INTE ATT ÅTERSKAPA med designvariabler (mätt 2026-09-16):
+ *   - Skuggan runt rutan, och "Anpassa"-knappens gråa text.
+ *   - Knapparnas storlek och vikt — geometrin är lika på alla sajter, med flit.
+ */
+
+:root {
+  /* --- Bakgrund och text ------------------------------------------- */
+  --bg-main: #ffffff;
+  --text-main: #111827;       /* 17,7:1 mot vitt */
+  --text-muted: #4b5563;      /* 7,6:1 mot vitt */
+  --bg-muted: rgba(15, 29, 58, 0.08);
+
+  /* --- Accent ------------------------------------------------------- */
+  /* Mörk text på gult: #111827 mot #f9c80e ger 11,5:1. */
+  --accent-color: #f9c80e;
+  --accent-hover: #e0b40d;
+  --btn-accent-text: #111827;
+  /* Exakt hoverfärg är satt, så filtret ska inte läggas ovanpå. */
+  --btn-hover-filter: none;
+
+  /* --- Kanter ------------------------------------------------------- */
+  --border-color: rgba(15, 29, 58, 0.12);
+  --btn-border: rgba(15, 29, 58, 0.18);
+
+  /* --- Knappar ------------------------------------------------------ */
+  /* "Anpassa" och "Tillbaka": vita med ram. Ljusning ser ut som en bugg på
+     en ljus banner, så hovringen görs med en ljusgrå yta i stället. */
+  --bg-customize-btn: #ffffff;
+  --btn-secondary-hover-bg: #f3f4f6;
+  --btn-secondary-hover-filter: none;
+
+  /* --- Ikon och reglage --------------------------------------------- */
+  --logo-color: #0f1d3a;      /* mörkblå kaka på gul ruta, som förut */
+  --bg-logo-wrapper: #f9c80e;
+  --toggle-switch-bg: #d1d5db;
+  --toggle-circle: #ffffff;   /* vit knapp i reglaget, som förut. Utan raden
+                                 blev den mörk (uppmätt i skärmbild 2026-09-16) */
+
+  /* --- Detaljer ------------------------------------------------------ */
+  --scroll-gradient: linear-gradient(to top, rgba(15, 29, 58, 0.06), transparent);
+  --policy-link-color: #2563eb;   /* 5,2:1 mot vitt */
+
+  /* --- Typsnitt ------------------------------------------------------ */
+  /* Sajtens egen variabel: Satoshi med systemtypsnitt som reserv. Bannern
+     laddar aldrig egna typsnitt. */
+  --main-font: var(--font-family);
+
+  /* --- Radier --------------------------------------------------------- */
+  --radius-md: 24px;          /* knapparna, som sajtens --radius-button */
+  /* --toggle-radius står INTE här: publish-design har en egen tillåtlista
+     (publishDesign.ts) där den saknas, och hoppar över den. Det spelar ingen
+     roll här — reglagen är helt runda både med 12px och med radius-md 24px. */
+}
