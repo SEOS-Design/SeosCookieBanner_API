@@ -7,7 +7,7 @@
     "seed": "ts-node src/scripts/seed.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "ts-node src/validators/consentValidator.test.ts",
+    "test": "ts-node src/validators/consentValidator.test.ts && ts-node src/lib/consentVolume.test.ts",
     "publish-policy": "ts-node src/scripts/publishPolicy.ts",
     "policy-status": "ts-node src/scripts/policyStatus.ts",
     "aterstall": "ts-node src/scripts/restore.ts",

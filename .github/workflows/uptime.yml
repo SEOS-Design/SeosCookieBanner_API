@@ -130,3 +130,125 @@ jobs:
                 labels: ["uptime"],
               });
             }
+
+      # VOLYMLARMET (D3). Larmar nar en sajt inte sparat nagot samtycke pa 48 timmar.
+      #
+      # Allt ovan kontrollerar att API:t SVARAR. Ingenting kontrollerade att
+      # samtycken faktiskt NAR FRAM - och tillvaxtstod sparade darfor inget pa
+      # sex veckor utan att nagot larmade.
+      #
+      # Kors i samma korning som pingen, som redan vackt Neon: inga extra
+      # uppvakningar. Hoppas over om API:t ar nere - det larmet har redan gatt.
+      #
+      # Kraver MONITOR_SECRET i bade Vercel och GitHub Secrets. Egen nyckel, inte
+      # CRON_SECRET, som aven oppnar gallringen.
+      - name: Kontrollera samtyckesvolym
+        id: volym
+        if: steps.ping.outputs.failed != 'true' || inputs.testlarm == true
+        env:
+          TESTLARM: ${{ inputs.testlarm }}
+          MONITOR_SECRET: ${{ secrets.MONITOR_SECRET }}
+        run: |
+          if [ "$TESTLARM" = "true" ]; then
+            {
+              echo "failed=true"
+              echo "test=true"
+              echo "tysta=TESTLARM - ingen riktig tystnad"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -z "$MONITOR_SECRET" ]; then
+            {
+              echo "failed=true"
+              echo "tysta=Kontrollen kan inte koras: MONITOR_SECRET saknas i GitHub Secrets"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          code=$(curl -sS -o volym.json -w "%{http_code}" --max-time 25 \
+            -H "Authorization: Bearer $MONITOR_SECRET" \
+            "https://seos-cookie-banner-api.vercel.app/monitor/consent-volume" || echo "000")
+          echo "volymkontroll -> $code"
+
+          if [ "$code" != "200" ]; then
+            {
+              echo "failed=true"
+              echo "tysta=Kontrollen fungerar inte: svarade $code (401 = nyckeln stammer inte mellan GitHub och Vercel)"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          tysta=$(node -e '
+            const j = require("./volym.json");
+            console.log(j.quiet.map((q) => `${q.domain}: tyst i ${q.hoursSilent} h, senaste samtycke ${q.lastConsentAt}`).join(" | "));
+          ')
+          echo "kontrollerade sajter: $(node -e 'console.log(require("./volym.json").checked)')"
+
+          if [ -n "$tysta" ]; then
+            echo "tysta sajter: $tysta"
+            { echo "failed=true"; echo "tysta=$tysta"; } >> "$GITHUB_OUTPUT"
+          else
+            echo "failed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Oppna issue om en sajt ar tyst
+        if: steps.volym.outputs.failed == 'true'
+        uses: actions/github-script@v9
+        env:
+          TYSTA: ${{ steps.volym.outputs.tysta }}
+          AR_TEST: ${{ steps.volym.outputs.test }}
+        with:
+          script: |
+            const tysta = process.env.TYSTA || "";
+            const arTest = process.env.AR_TEST === "true";
+
+            const title = arTest
+              ? "🧪 Testlarm: kontroll av volymlarmet"
+              : "🔴 Samtyckesvolym: en sajt sparar inga samtycken";
+
+            const body = arTest
+              ? [
+                  "Det har ar **ingen riktig tystnad**. Nagon korde Uptime manuellt med",
+                  "rutan `testlarm` ikryssad for att kontrollera att volymlarmet nar fram.",
+                  "",
+                  `- **Tidpunkt:** ${new Date().toISOString()}`,
+                  "",
+                  "Fick du ett mejl om det har issuet fungerar kedjan. Stang issuet.",
+                ].join("\n")
+              : [
+                  "Volymlarmet hittade en sajt som inte sparat nagot samtycke pa 48 timmar,",
+                  "eller sa kunde kontrollen inte koras.",
+                  "",
+                  ...tysta.split(" | ").map((rad) => `- ${rad}`),
+                  "",
+                  `- **Tidpunkt:** ${new Date().toISOString()}`,
+                  "",
+                  "**Bannern kan se hel ut anda.** Kontrollera i tur och ordning: syns bannern",
+                  "pa sajten, svarar POST /consent med 201 (Vercel -> API-projektet -> Logs),",
+                  "och har sajten origin-kontroll som stammer med sin adress.",
+                  "",
+                  "Kors via `.github/workflows/uptime.yml`. Regeln: `src/lib/consentVolume.ts`.",
+                ].join("\n");
+
+            const oppna = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "samtyckesvolym",
+            });
+
+            // Ett oppet issue racker. Uptime kor varje timme, och en tyst sajt
+            // ska inte ge ett mejl i timmen.
+            if (oppna.data.length > 0) {
+              console.log(`Issue #${oppna.data[0].number} ar redan oppet - inget nytt mejl.`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ["samtyckesvolym"],
+            });

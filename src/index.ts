@@ -5,6 +5,7 @@ import { consentRoute } from "./routes/consent";
 import { configRoute } from "./routes/config";
 import { cronRoute } from "./routes/cron";
 import { backupRoute } from "./routes/backup";
+import { monitorRoute } from "./routes/monitor";
 import { cors } from "hono/cors";
 import { handle } from "hono/vercel";
 import { db } from "./db/client";
@@ -119,6 +120,7 @@ app.route("/consent", consentRoute);
 app.route("/config", configRoute);
 app.route("/cron", cronRoute);
 app.route("/cron", backupRoute);
+app.route("/monitor", monitorRoute);
 
 export const GET = handle(app);
 export const POST = handle(app);
