@@ -1,0 +1,68 @@
+/* Tillväxthuset — www.tillvaxthuset.se
+ *
+ * Ljus banner som följer sajtens Webflow-variabler. Värdena är hämtade ur
+ * projektets :root i webflow.shared.css 2026-09-17, inte gissade:
+ *
+ *   --_colors---brand-primary     #0f2544   mörkblå
+ *   --_colors---text-color-dark   #1c2b3a   text
+ *   --_colors---text-color-mid    #4a5a68   dämpad text
+ *   --_colors---accent-color      #8fd694   grön accent (sajtens knappar)
+ *   --_colors---accent-hover      #5fb567   accent vid hovring
+ *   --_colors---card-color        #f0f4fa   kortyta
+ *   --_colors---light-green       #eff1ee   ljusgrön yta
+ *   --_spacing---radius-md        12px      knappar (samma som basvärdet)
+ *   --_spacing---radius-lg        20px      större ytor
+ *   --_typography---primary       "PT Sans", sans-serif
+ *
+ * --_colors---text-color-muted (#8fa3b5) används INTE: 2,6:1 mot vitt, under
+ * kravet 4,5:1.
+ *
+ * Båda valknapparna i accentfärgen, jämbördiga (Björns beslut 2026-09-16).
+ */
+
+:root {
+  /* --- Bakgrund och text ------------------------------------------- */
+  --bg-main: #ffffff;
+  --text-main: #1c2b3a;       /* 14,5:1 mot vitt */
+  --text-muted: #4a5a68;      /* 7,2:1 mot vitt */
+  --bg-muted: #e5e9ef;        /* linjerna mellan kategorierna */
+
+  /* --- Accent ------------------------------------------------------- */
+  /* Sajtens egna knappar: grön med mörk text. #1c2b3a mot #8fd694 ger
+     9,6:1, och mot hovringsfärgen #5fb567 6,2:1. */
+  --accent-color: #8fd694;
+  --accent-hover: #5fb567;
+  --btn-accent-text: #1c2b3a;
+  --btn-hover-filter: none;   /* exakt hoverfärg är satt */
+
+  /* --- Kanter ------------------------------------------------------- */
+  --border-color: #e5e9ef;
+  --btn-border: #d3dae3;
+
+  /* --- Knappar ------------------------------------------------------ */
+  /* "Anpassa" och "Tillbaka": vita med ram, ljus kortyta vid hovring.
+     Ljusning ser ut som en bugg på en ljus banner. */
+  --bg-customize-btn: #ffffff;
+  --btn-secondary-hover-bg: #f0f4fa;
+  --btn-secondary-hover-filter: none;
+
+  /* --- Ikon och reglage --------------------------------------------- */
+  --logo-color: #0f2544;      /* mörkblå kaka på ljusgrön ruta */
+  --bg-logo-wrapper: #eff1ee;
+  --toggle-switch-bg: #cfd8e2;
+  --toggle-circle: #ffffff;   /* utan raden följer den textfärgen och blir mörk */
+
+  /* --- Detaljer ------------------------------------------------------ */
+  --scroll-gradient: none;    /* basvärdets toning är gjord för mörk bakgrund */
+  --policy-link-color: #0f2544;   /* 15,3:1 mot vitt */
+  --badge-text-color: #1c2b3a;    /* på den ljusgröna ikonrutans färg */
+  --fokus-ring: 2px solid #0f2544;
+
+  /* --- Typsnitt ------------------------------------------------------ */
+  /* Sajtens egen variabel. Bannern laddar aldrig egna typsnitt. */
+  --main-font: var(--_typography---primary);
+
+  /* --- Radier --------------------------------------------------------- */
+  /* --radius-md lämnas på basvärdet 12px - samma som sajtens knappar. */
+  --radius-lg: 20px;
+}
