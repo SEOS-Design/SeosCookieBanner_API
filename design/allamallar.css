@@ -1,0 +1,67 @@
+/* Allamallar — www.allamallar.se
+ *
+ * Utkast 2026-09-21: ljus banner ur sajtens egna designtokens i
+ * app/tokens.css (repot Hejsangithub/allamallar), inte gissade:
+ *
+ *   --surface-card          #ffffff   vit
+ *   --text-strong  ink-900  #1a1520   text
+ *   --text-muted   ink-600  #5d5468   dämpad text
+ *   --brand        plum-700 #452163   mörk lila, sajtens knappar
+ *   --brand-hover  plum-600 #5a2b80   hovring
+ *   --brand-ink    plum-900 #241034
+ *   --brand-soft   plum-100 #eee6f6   lila ton
+ *   --border-subtle ink-200 #e2dee7
+ *   --radius-control 8px · --radius-card 14px
+ *   typsnitt  Instrument Sans (--font-sans-loaded), rubriker Source Serif 4
+ *
+ * Kontrast, uträknat med samma kod som designpanelen:
+ *   text 17,9:1 · dämpad 7,2:1 · vit knapptext mot #452163 12,7:1 (mot
+ *   hovring 10,0:1) · policylänk 12,7:1 · ikontext 14,4:1.
+ *
+ * Finjusteras i npm run design -- --site=allamallar.
+ */
+
+:root {
+  /* --- Bakgrund och text ------------------------------------------- */
+  --bg-main: #ffffff;
+  --text-main: #1a1520;
+  --text-muted: #5d5468;
+  --bg-muted: #e2dee7;        /* linjerna mellan kategorierna */
+
+  /* --- Accent ------------------------------------------------------- */
+  /* Båda valknapparna i sajtens mörka lila, jämbördiga. */
+  --accent-color: #452163;
+  --accent-hover: #5a2b80;
+  --btn-accent-text: #ffffff;
+  --btn-hover-filter: none;   /* exakt hoverfärg är satt */
+
+  /* --- Kanter ------------------------------------------------------- */
+  --border-color: #e2dee7;
+  --btn-border: #c4becb;
+
+  /* --- Knappar ------------------------------------------------------ */
+  --bg-customize-btn: #ffffff;
+  --btn-secondary-hover-bg: #f7f3fb;
+  --btn-secondary-hover-filter: none;
+
+  /* --- Ikon och reglage --------------------------------------------- */
+  --logo-color: #452163;
+  --bg-logo-wrapper: #eee6f6;
+  --toggle-switch-bg: #d9c9ea;
+  --toggle-circle: #ffffff;   /* utan raden följer den textfärgen och blir mörk */
+
+  /* --- Detaljer ------------------------------------------------------ */
+  --scroll-gradient: none;    /* basvärdets toning är gjord för mörk bakgrund */
+  --policy-link-color: #452163;
+  --badge-text-color: #241034;
+  --fokus-ring: 2px solid #713ba0;
+
+  /* --- Typsnitt ------------------------------------------------------ */
+  /* Sajtens egna variabler från next/font. Bannern laddar aldrig egna. */
+  --main-font: var(--font-sans-loaded);
+  --header-font: var(--font-display-loaded);
+
+  /* --- Radier --------------------------------------------------------- */
+  --radius-md: 8px;
+  --radius-lg: 14px;
+}

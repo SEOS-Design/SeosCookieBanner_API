@@ -39,6 +39,7 @@ import {
   CONTRAST_MINIMUM,
 } from "../lib/designFile";
 import { buildPanel } from "./designPanelUi";
+import { injectBanner } from "../lib/injectBanner";
 
 const arg = (name: string): string | undefined =>
   process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=").slice(1).join("=");
@@ -54,7 +55,7 @@ const run = async () => {
   const site = arg("site");
 
   const allSites = await db.query.websites.findMany({
-    columns: { name: true, domain: true, design: true },
+    columns: { name: true, domain: true, design: true, site_key: true },
   });
 
   if (!site) {
@@ -140,7 +141,29 @@ const run = async () => {
     });
   });
 
-  // 2. Inga robotsamtycken i kundens bevislogg.
+  // 2. Fore lansering: sajten saknar bannern. Da lagger panelen in taggen i
+  //    sidan - bara i det har fonstret, aldrig pa sajten - sa att designen kan
+  //    godkannas innan kundens kod ar pushad. Har sidan redan bannern lamnas
+  //    den orord (lib/injectBanner.ts).
+  let announced = false;
+  await context.route(`https://${website.domain}/**`, async (route) => {
+    if (route.request().resourceType() !== "document") return route.continue();
+    const response = await route.fetch();
+    const type = response.headers()["content-type"] ?? "";
+    if (!type.includes("text/html") || !website.site_key) return route.fulfill({ response });
+
+    const { html, injected } = injectBanner(await response.text(), website.site_key);
+    if (injected && !announced) {
+      announced = true;
+      console.log(
+        "Bannern finns inte pa sajten an. Panelen lagger in den i det har fonstret,\n" +
+          "sa att du ser hur det blir efter lansering. Sajten rors inte.\n",
+      );
+    }
+    await route.fulfill({ response, body: html });
+  });
+
+  // 3. Inga robotsamtycken i kundens bevislogg.
   await context.route("**/consent", (route) =>
     route.request().method() === "POST" ? route.abort() : route.continue(),
   );

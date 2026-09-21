@@ -69,7 +69,6 @@
 
   /* --- Radier --------------------------------------------------------- */
   --radius-md: 24px;          /* knapparna, som sajtens --radius-button */
-  /* --toggle-radius står INTE här: publish-design har en egen tillåtlista
-     (publishDesign.ts) där den saknas, och hoppar över den. Det spelar ingen
-     roll här — reglagen är helt runda både med 12px och med radius-md 24px. */
+  /* --toggle-radius behövs inte: reglagen är helt runda som standard sedan
+     2026-09-21, oberoende av knapparnas radie. */
 }

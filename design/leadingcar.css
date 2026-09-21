@@ -86,10 +86,9 @@
      INTE reglagen, trots vad mallens kommentar sager (uppmatt 2026-09-02:
      style.css rad 241, 519 och 562).
 
-     ⚠️ REGLAGEN DELAR --radius-md MED KNAPPARNA (style.css rad 284 och 409).
-     De gar alltsa inte att skilja at idag: satter man knapparna till sajtens
-     8px foljer reglagen med. Bjorn vill ha dem isar - det kraver en egen
-     variabel i bannern och ligger som todo. */
+     Reglagen foljer INTE med: de ar helt runda som standard sedan
+     2026-09-21 (--toggle-radius i bannerns style.css). Fore dess blev de
+     kantiga har, eftersom de delade --radius-md med knapparna. */
   --radius-md: 8px;
   --radius-lg: 12px;
 }
