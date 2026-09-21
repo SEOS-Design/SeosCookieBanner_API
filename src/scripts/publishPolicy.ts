@@ -1,19 +1,29 @@
 import "dotenv/config";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/client";
 import { websites, policyVersion } from "../db/schema";
+import { choosePolicyFile } from "../lib/policyFile";
 
 /**
  * Publicerar policytexter fran policies/ till databasen.
  *
- *   En sajt:    npm run publish-policy -- --site=tillvaxtstod --version=1.0.3
- *   Alla:       npm run publish-policy -- --all --version=1.0.4
+ *   Provkorning:  npm run publish-policy -- --site=tillvaxtstod --version=1.0.3
+ *   Skarpt:       npm run publish-policy -- --site=tillvaxtstod --version=1.0.3 --run
+ *   Alla:         npm run publish-policy -- --all --version=1.0.4 [--run]
  *
- * REGELN: en sajt anvander sin EGEN fil om den finns, annars basmallen.
- *   policies/<sajt>/<version>.html   ->  om den finns
- *   policies/base/<version>.html     ->  annars
+ * PROVKORNING AR STANDARD sedan 2026-09-21, som i publish-design och
+ * publish-texts. Forut publicerade kommandot direkt - och en publicerad
+ * version gar aldrig att ta tillbaka.
+ *
+ * REGELN (lib/policyFile.ts):
+ *   Sajt MED egen variant    ->  policies/<sajt>/<version>.html, annars hoppas den over
+ *   Sajt UTAN egen variant   ->  policies/base/<version>.html
+ *
+ * En sajt med egen variant far ALDRIG basmallen som reserv - den hade tappat
+ * sina egna tillagg, for tillvaxtstod texten om Meta-pixeln. Det var sa
+ * kommandot betedde sig fram till 2026-09-21.
  *
  * Publicerade versioner skrivs aldrig om. Varje consent_event pekar pa exakt
  * policy_version_id - andras en publicerad text ser det ut som att tidigare
@@ -30,24 +40,27 @@ const hasFlag = (name: string): boolean =>
 const toShortName = (domain: string): string =>
   domain.replace(/^www\./, "").split(".")[0]!;
 
-const findFile = (domain: string, version: string) => {
-  const eget = join("policies", toShortName(domain), `${version}.html`);
-  if (existsSync(eget)) return { path: eget, egen: true };
-  const base = join("policies", "base", `${version}.html`);
-  if (existsSync(base)) return { path: base, egen: false };
-  return null;
+/** Versionerna i policies/<sajt>/, eller null om mappen inte finns. */
+const ownVersions = (domain: string): string[] | null => {
+  const dir = join("policies", toShortName(domain));
+  if (!existsSync(dir)) return null;
+  return readdirSync(dir)
+    .filter((name) => name.endsWith(".html"))
+    .map((name) => name.slice(0, -".html".length));
 };
 
 const run = async () => {
   const version = arg("version");
   const site = arg("site");
   const all = hasFlag("all");
+  const live = hasFlag("run");
 
   if (!version || (!site && !all)) {
     console.error(
       "Anvandning:\n" +
-        "  npm run publish-policy -- --site=<kortnamn> --version=<x.y.z>\n" +
-        "  npm run publish-policy -- --all --version=<x.y.z>",
+        "  npm run publish-policy -- --site=<kortnamn> --version=<x.y.z>          (provkorning)\n" +
+        "  npm run publish-policy -- --site=<kortnamn> --version=<x.y.z> --run    (skarpt)\n" +
+        "  npm run publish-policy -- --all --version=<x.y.z> [--run]",
     );
     process.exit(1);
   }
@@ -73,11 +86,16 @@ const run = async () => {
   let skipped = 0;
 
   for (const s of targetSites) {
-    const file = findFile(s.domain, version);
+    const choice = choosePolicyFile({
+      site: toShortName(s.domain),
+      version,
+      ownVersions: ownVersions(s.domain),
+      baseExists: existsSync(join("policies", "base", `${version}.html`)),
+    });
 
-    if (!file) {
+    if (choice.kind === "skip") {
       console.log(`  HOPPAR  ${s.domain}`);
-      console.log(`          ingen fil for version ${version} (varken egen eller base)`);
+      console.log(`          ${choice.reason}`);
       skipped++;
       continue;
     }
@@ -97,7 +115,16 @@ const run = async () => {
       continue;
     }
 
-    const content = readFileSync(file.path, "utf-8");
+    const label = choice.kind === "own" ? "  (egen variant)" : "  (basmall)";
+
+    if (!live) {
+      console.log(`  SKULLE  ${s.domain}`);
+      console.log(`          ${choice.path}${label}`);
+      published++;
+      continue;
+    }
+
+    const content = readFileSync(choice.path, "utf-8");
     await db.insert(policyVersion).values({
       website_id: s.id,
       version_label: version,
@@ -106,8 +133,16 @@ const run = async () => {
     });
 
     console.log(`  KLAR    ${s.domain}`);
-    console.log(`          ${file.path}${file.egen ? "  (egen variant)" : "  (basmall)"}`);
+    console.log(`          ${choice.path}${label}`);
     published++;
+  }
+
+  if (!live) {
+    console.log(
+      `\nProvkorning - ingenting publicerat. ${published} skulle publiceras, ${skipped} hoppas over.\n` +
+        "Lagg till --run nar listan ovan stammer. En publicerad version gar aldrig att andra.",
+    );
+    process.exit(0);
   }
 
   console.log(`\n${published} publicerade, ${skipped} hoppade.`);

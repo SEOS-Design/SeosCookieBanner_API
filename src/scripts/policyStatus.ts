@@ -84,8 +84,8 @@ const run = async () => {
     console.log("");
   }
 
-  console.log("Uppdatera en sajt : npm run publish-policy -- --site=<kortnamn> --version=<x.y.z>");
-  console.log("Uppdatera alla    : npm run publish-policy -- --all --version=<x.y.z>\n");
+  console.log("Uppdatera en sajt : npm run publish-policy -- --site=<kortnamn> --version=<x.y.z> --run");
+  console.log("Uppdatera alla    : npm run publish-policy -- --all --version=<x.y.z> --run\n");
   process.exit(0);
 };
 
