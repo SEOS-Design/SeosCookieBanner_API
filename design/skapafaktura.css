@@ -1,0 +1,66 @@
+/* Skapafaktura.nu — www.skapafaktura.nu
+ *
+ * Utkast 2026-09-21: ljus banner som följer sajtens egna variabler i
+ * src/app/globals.css (repot Hejsangithub/skapafaktura-nu), inte gissade:
+ *
+ *   --background            #ffffff   vit
+ *   --foreground            #0d0d1a   nära-svart text
+ *   --muted-foreground      #5b5b6b   dämpad text
+ *   --primary               #534ab7   lila, sajtens primära knappar
+ *   footerns bakgrund       #201459   mörklila
+ *   --secondary             #f5f4fe   lila ton
+ *   --border                #e8e8f0   hårfin lavendelgrå
+ *   --radius                10px
+ *   typsnitt                DM Sans (next/font, --font-dm-sans)
+ *
+ * Kontrast, uträknat med samma kod som designpanelen:
+ *   text #0d0d1a mot vitt 19,3:1 · dämpad #5b5b6b 6,7:1 · vit knapptext mot
+ *   #534ab7 6,9:1 (mot hovring #201459 16,1:1) · ikontext #201459 mot
+ *   #f5f4fe 14,7:1. Alla över kravet 4,5:1.
+ *
+ * Finjusteras i npm run design -- --site=skapafaktura.
+ */
+
+:root {
+  /* --- Bakgrund och text ------------------------------------------- */
+  --bg-main: #ffffff;
+  --text-main: #0d0d1a;
+  --text-muted: #5b5b6b;
+  --bg-muted: #e8e8f0;        /* linjerna mellan kategorierna */
+
+  /* --- Accent ------------------------------------------------------- */
+  /* Båda valknapparna lila och jämbördiga, som på tillväxtstöd. */
+  --accent-color: #534ab7;
+  --accent-hover: #201459;
+  --btn-accent-text: #ffffff;
+  --btn-hover-filter: none;   /* exakt hoverfärg är satt */
+
+  /* --- Kanter ------------------------------------------------------- */
+  --border-color: #e8e8f0;
+  --btn-border: #d9d7f2;
+
+  /* --- Knappar ------------------------------------------------------ */
+  /* "Anpassa" och "Tillbaka": vita med ram, lila ton vid hovring. */
+  --bg-customize-btn: #ffffff;
+  --btn-secondary-hover-bg: #f5f4fe;
+  --btn-secondary-hover-filter: none;
+
+  /* --- Ikon och reglage --------------------------------------------- */
+  --logo-color: #534ab7;
+  --bg-logo-wrapper: #f5f4fe;
+  --toggle-switch-bg: #d9d7f2;
+  --toggle-circle: #ffffff;   /* utan raden följer den textfärgen och blir mörk */
+
+  /* --- Detaljer ------------------------------------------------------ */
+  --scroll-gradient: none;    /* basvärdets toning är gjord för mörk bakgrund */
+  --policy-link-color: #534ab7;
+  --badge-text-color: #201459;
+  --fokus-ring: 2px solid #534ab7;
+
+  /* --- Typsnitt ------------------------------------------------------ */
+  /* Sajtens egen variabel. Bannern laddar aldrig egna typsnitt. */
+  --main-font: var(--font-dm-sans);
+
+  /* --- Radier --------------------------------------------------------- */
+  --radius-md: 10px;
+}
