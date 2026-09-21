@@ -382,7 +382,7 @@ const run = async () => {
   console.log(
     "Skrivet till databasen.\n\n" +
       "SA HAR SER DU DET:\n" +
-      `  Direkt, for dig    https://${website.domain}/?seos_farsk=1\n` +
+      `  Direkt, for dig    https://${website.domain}/?seos_preview\n` +
       "  Direkt, for ALLA   Redeploya API:t i Vercel (Deployments -> senaste\n" +
       "                     -> Redeploy).\n" +
       "  Av sig sjalvt      Inom sex timmar. Gor ingenting.\n\n" +

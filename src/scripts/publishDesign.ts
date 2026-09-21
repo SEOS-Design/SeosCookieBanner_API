@@ -4,6 +4,8 @@ import { join } from "path";
 import { eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { websites } from "../db/schema";
+import { DESIGN_VARIABLES, GEOMETRY_VARIABLES } from "../lib/designVariables";
+import { parseVariables as lasVariabler } from "../lib/designFile";
 
 /**
  * Publicerar en sajts designvarden fran design/ till databasen.
@@ -45,54 +47,11 @@ import { websites } from "../db/schema";
 // DESIGN_VARIABLES. Att den star har OCKSA ar poangen med det har skriptet:
 // felet upptacks nar du publicerar, med ett tydligt meddelande - i stallet
 // for att vardet tyst faller bort nagonstans langre fram.
-const ALLOWED = new Set([
-  "bg-main",
-  "bg-muted",
-  "text-main",
-  "text-muted",
-  "accent-color",
-  "accent-hover",
-  "bg-dark-btn",
-  "border-color",
-  "btn-border",
-  "logo-color",
-  "bg-logo-wrapper",
-  "bg-customize-btn",
-  "toggle-switch-bg",
-  "toggle-circle",
-  "btn-accent-text",
-  "btn-hover-filter",
-  "btn-secondary-hover-bg",
-  "btn-secondary-hover-filter",
-  "fokus-ring",
-  "scrollbar-thumb",
-  "policy-link-color",
-  "badge-text-color",
-  "scroll-gradient",
-  "main-font",
-  "header-font",
-  "radius-sm",
-  "radius-md",
-  "radius-lg",
-]);
+const ALLOWED = DESIGN_VARIABLES;
 
 // Geometri namns sarskilt for att felmeddelandet ska kunna forklara VARFOR,
 // i stallet for att bara saga "okand variabel".
-const GEOMETRY = new Set([
-  "banner-width",
-  "header-text-size",
-  "body-text-size",
-  "badge-text-size",
-  "small-text-size",
-  "icon-container-size",
-  "space-xs",
-  "space-sm",
-  "space-md",
-  "space-lg",
-  "space-xl",
-  "btn-line-height",
-  "header-line-height",
-]);
+const GEOMETRY = GEOMETRY_VARIABLES;
 
 const MAX_VALUE_LENGTH = 200;
 // Samma sparr som i API:t: ett CSS-varde med url() far webblasaren att hamta
@@ -106,25 +65,9 @@ const hasFlag = (name: string): boolean => process.argv.includes(`--${name}`);
 
 const toShortName = (domain: string): string => domain.replace(/^www\./, "").split(".")[0]!;
 
-/**
- * Plockar ut CSS-variabler ur en fil. Medvetet enkelt: allt utom
- * `--namn: varde;` ignoreras. Kommentarer tas bort forst.
- */
-export function parseVariables(css: string): Record<string, string> {
-  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
-  const found: Record<string, string> = {};
-
-  const pattern = /--([a-zA-Z0-9-]+)\s*:\s*([^;]+);/g;
-  let trafF: RegExpExecArray | null;
-  while ((trafF = pattern.exec(withoutComments)) !== null) {
-    const name = trafF[1]!.trim();
-    // Radbrytningar och dubbla mellanslag plattas ut - ett CSS-varde far
-    // spanna flera rader i filen men ska lagras som en rad.
-    const value = trafF[2]!.replace(/\s+/g, " ").trim();
-    found[name] = value;
-  }
-  return found;
-}
+// parseVariables bor i lib/designFile.ts sedan 2026-09-18, sa panelen och
+// publiceringen laser filen pa exakt samma satt.
+export { parseVariables } from "../lib/designFile";
 
 const run = async () => {
   const site = arg("site");
@@ -183,7 +126,7 @@ const run = async () => {
     process.exit(1);
   }
 
-  const found = parseVariables(readFileSync(path, "utf8"));
+  const found = lasVariabler(readFileSync(path, "utf8"));
   const design: Record<string, string> = {};
   const issues: string[] = [];
 
@@ -254,8 +197,8 @@ const run = async () => {
   console.log(
     "Skrivet till databasen.\n\n" +
       "SA HAR SER DU DET:\n" +
-      `  Direkt, for dig    Oppna sajten med ?seos_farsk=1 pa slutet:\n` +
-      `                     https://${website.domain}/?seos_farsk=1\n\n` +
+      `  Direkt, for dig    Oppna sajten med ?seos_preview pa slutet:\n` +
+      `                     https://${website.domain}/?seos_preview\n\n` +
       "  Direkt, for ALLA   Redeploya API:t i Vercel (Deployments -> senaste\n" +
       "                     -> Redeploy). CDN:et cachar per deployment, sa en ny\n" +
       "                     deployment gor att gamla sparade svar slutar anvandas.\n\n" +

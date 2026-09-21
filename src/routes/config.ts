@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { db } from "../db/client";
+import { DESIGN_VARIABLES } from "../lib/designVariables";
 import { websites } from "../db/schema";
 
 //========================================================================
@@ -65,7 +66,7 @@ export const configRoute = new Hono();
 //
 // Priset: en designandring nar besokarna efter upp till sex timmar i stallet
 // for en. Tva nodutgangar finns, och ingen kostar nagot:
-//   - ?seos_farsk=1 gar forbi bada cacherna for den som kontrollerar
+//   - ?seos_preview gar forbi bada cacherna for den som kontrollerar
 //   - en redeploy av API:t tomer CDN-cachen direkt for alla besokare
 // Den andra skrivs ut av publish-design och star i driftmanualen avsnitt 13.
 //
@@ -130,46 +131,9 @@ const MAX_VALUE_LENGTH = 200;
 // --icon-path star heller inte med: den innehaller en url(), alltso ett varde
 // som far webblasaren att hamta nagot. Vill vi gora ikonen konfigurerbar ska
 // adressen valideras for sig.
-const ALLOWED_VARIABLES = new Set([
-  // Farger
-  "bg-main",
-  "bg-muted",
-  "text-main",
-  "text-muted",
-  "accent-color",
-  "accent-hover",
-  "bg-dark-btn",
-  "border-color",
-  "btn-border",
-  "logo-color",
-  "bg-logo-wrapper",
-  "bg-customize-btn",
-  "toggle-switch-bg",
-  "toggle-circle",
-  // Knapptext och hovring
-  "btn-accent-text",
-  "btn-hover-filter",
-  "btn-secondary-hover-bg",
-  "btn-secondary-hover-filter",
-  // Tillganglighet - egna variabler sa en sajt kan gora dem synliga mot sin
-  // egen bakgrund. En fokusring som inte syns ar samma sak som ingen ring.
-  "fokus-ring",
-  "scrollbar-thumb",
-  "policy-link-color",
-  "badge-text-color",
-  // Ovrigt utseende
-  "scroll-gradient",
-  // Typsnitt. Bannern laddar aldrig egna - den anvander de sajten redan har.
-  "main-font",
-  "header-font",
-  // Radier
-  "radius-sm",
-  "radius-md",
-  "radius-lg",
-  // Reglagets egen radie. Lag tidigare pa radius-md, som ocksa styr
-  // knapparna - kantiga knappar gav kantiga reglage pa kopet.
-  "toggle-radius",
-]);
+// Listan ligger i lib/designVariables.ts sedan 2026-09-18 - samma lista som
+// publish-design och designpanelen anvander.
+const ALLOWED_VARIABLES = DESIGN_VARIABLES;
 
 // Vardet skrivs med style.setProperty(), alltsa in i CSS-motorn som ett
 // VARDE - det tolkas aldrig som HTML eller JavaScript. Det ar skalet till att
@@ -381,6 +345,19 @@ export function sanitizeTexts(texts: unknown): Texts {
   return cleaned;
 }
 
+/**
+ * Forhandslaget: gar forbi bade CDN-cachen och minnescachen.
+ *
+ * Bade `preview` och `farsk` accepteras. Namnet byttes 2026-09-18, och
+ * bannerfilen ute hos kunderna uppdateras inte i samma sekund som API:t - tas
+ * det gamla namnet bort direkt slutar forhandslaget fungera mitt emellan de
+ * tva driftsattningarna. Det gamla namnet kan tas bort nar alla sajter kor en
+ * banner byggd efter 2026-09-18.
+ */
+function isPreview(preview: string | undefined, legacy: string | undefined): boolean {
+  return preview !== undefined || legacy !== undefined;
+}
+
 configRoute.get("/:siteKey", async (c) => {
   const siteKey = c.req.param("siteKey");
 
@@ -394,13 +371,13 @@ configRoute.get("/:siteKey", async (c) => {
   const setCacheHeaders = () =>
     c.header(
       "Cache-Control",
-      c.req.query("farsk") !== undefined
+      isPreview(c.req.query("preview"), c.req.query("farsk"))
         ? "no-store"
         : `public, max-age=0, s-maxage=${CDN_CACHE_SECONDS}, stale-while-revalidate=${STALE_SECONDS}`,
     );
 
-  // FARSKLAGE. Bannern lagger till ?farsk=<tidsstampel> nar nagon oppnat
-  // sidan med ?seos_farsk=1 - alltsa nar en manniska sitter och justerar
+  // FORHANDSLAGE. Bannern lagger till ?preview=<tidsstampel> nar nagon oppnat
+  // sidan med ?seos_preview - alltsa nar en manniska sitter och justerar
   // farger och vill se resultatet nu, inte om en timme.
   //
   // Da hoppas BADA cacherna over. Tidsstampeln gor adressen unik sa CDN:et
@@ -409,7 +386,7 @@ configRoute.get("/:siteKey", async (c) => {
   // Kostar ingenting i drift: bara den som sjalv ber om det gar forbi, och
   // det ar en manniska at gangen. Ingen ny angreppsyta heller -
   // policy-endpointen ar redan ocachad och traffar databasen likadant.
-  const fresh = c.req.query("farsk") !== undefined;
+  const fresh = isPreview(c.req.query("preview"), c.req.query("farsk"));
 
   if (!fresh) {
     const cached = memory.get(siteKey);

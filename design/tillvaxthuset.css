@@ -29,7 +29,10 @@
 
   /* --- Accent ------------------------------------------------------- */
   /* Sajtens egna knappar: grön med mörk text. #1c2b3a mot #8fd694 ger
-     9,6:1, och mot hovringsfärgen #5fb567 6,2:1. */
+     8,4:1, och mot hovringsfärgen #5fb567 5,7:1. Båda över kravet 4,5:1.
+     (Siffrorna stod som 9,6 och 6,2 fram till 2026-09-18 — de var räknade
+     mot den mörkare blå #0f2544, inte mot textfärgen som faktiskt används.
+     Omräknat med npm run design, kontrollerat mot en oberoende uträkning.) */
   --accent-color: #8fd694;
   --accent-hover: #5fb567;
   --btn-accent-text: #1c2b3a;
