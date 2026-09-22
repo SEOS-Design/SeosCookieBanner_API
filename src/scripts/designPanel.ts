@@ -108,7 +108,13 @@ const run = async () => {
     headless: false,
     args: ["--window-size=1500,1000", "--window-position=40,20"],
   });
-  const context = await browser.newContext({ viewport: null });
+  // bypassCSP: en sajt med strikt CSP (aktieforumet, 2026-09-22) blockerar
+  // annars bannerfilen och /config fore lansering, nar taggen och adresserna
+  // annu inte star i sajtens policy - och panelen visar ingen banner alls.
+  // Galler bara panelens eget fonster. Att sajtens CSP faktiskt slapper fram
+  // bannern efter lansering ar inte panelens sak att visa - det fangar
+  // overvaka och skanna, som kor utan undantag.
+  const context = await browser.newContext({ viewport: null, bypassCSP: true });
 
   // 1. Designen: svara med vardena fran panelen i stallet for databasens.
   await context.route("**/config/**", async (route) => {

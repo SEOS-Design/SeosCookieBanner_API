@@ -1,0 +1,75 @@
+/* Aktieforumet — www.aktieforumet.se
+ *
+ * Utkast 2026-09-22. FÖRSTA DESIGNEN SOM FÖLJER SAJTENS LJUSA OCH MÖRKA LÄGE.
+ *
+ * Värdena är sajtens EGNA variabler, inte färgkoder. Sajten sätter dem på
+ * :root (ljust) och [data-theme="dark"] (mörkt) i src/app/globals.css, och
+ * bannern ligger i <body> och ärver dem. Byter besökaren läge byter bannern
+ * med, utan att något behöver publiceras.
+ *
+ *   --af-surface         #FFFFFF / #16241B   kort och paneler
+ *   --af-surface-active  #EDF2EB / #1C2D22
+ *   --af-surface-quiet   #E7EEE5 / #16241B   sajtens .btn-secondary:hover
+ *   --af-line            #E2DED2 / #26382C
+ *   --af-text            #221F1A / #EAECE3
+ *   --af-muted           #6F6A61 / #9AA69B
+ *   --af-btn-bg          #143527 / #C6D6C8   sajtens .btn-primary
+ *   --af-btn-text        #F2F5EF / #10231A
+ *   --af-brand, --af-link, --af-focus   #143527 / #BFD3C2
+ *   --af-radius 8px · --af-radius-card 12px
+ *   typsnitt  Inter (--af-font-sans), rubriker Newsreader (--af-font-serif)
+ *
+ * Kontrast mot bannerns bakgrund, ljust / mörkt:
+ *   text 16,4 / 13,5 · dämpad 5,4 / 6,4 · knapptext 12,2 / 10,9 ·
+ *   knappkant och avslaget reglage 5,4 / 6,4 · reglageknappen av 5,4 / 6,4
+ *   och på 13,4 / 10,6 · policylänk 13,4 / 10,2 · ikon 11,8 / 9,2 ·
+ *   badge 14,5 / 12,2.
+ *
+ * ⚠️ Panelens färgrutor är tomma för var()-värden — det är väntat. Bannern i
+ * panelens fönster visar ändå rätt färger. Byter sajten namn på en variabel
+ * blir motsvarande färg ogiltig och bannern faller tillbaka på basvärdet —
+ * kontrollera designen om globals.css skrivs om.
+ */
+
+:root {
+  /* --- Bakgrund och text ------------------------------------------- */
+  --bg-main: var(--af-surface);
+  --text-main: var(--af-text);
+  --text-muted: var(--af-muted);
+  --bg-muted: var(--af-line);   /* linjerna mellan kategorierna, tabellhuvudet */
+
+  /* --- Accent ------------------------------------------------------- */
+  /* Båda valknapparna som sajtens .btn-primary, jämbördiga. */
+  --accent-color: var(--af-btn-bg);
+  --btn-accent-text: var(--af-btn-text);
+  --btn-hover-filter: brightness(1.07);  /* sajtens egen .btn-primary:hover */
+
+  /* --- Kanter ------------------------------------------------------- */
+  --border-color: var(--af-line);
+  --btn-border: var(--af-muted);  /* 3:1-kravet för kontroller, i båda lägena */
+
+  /* --- Knappar ------------------------------------------------------ */
+  --bg-customize-btn: var(--af-surface);
+  --btn-secondary-hover-bg: var(--af-surface-quiet);
+  --btn-secondary-hover-filter: none;  /* brightness bleknar en ljus knapp */
+
+  /* --- Ikon och reglage --------------------------------------------- */
+  --logo-color: var(--af-brand);
+  --bg-logo-wrapper: var(--af-surface-active);
+  --toggle-switch-bg: var(--af-muted);
+  --toggle-circle: var(--af-surface);
+
+  /* --- Detaljer ------------------------------------------------------ */
+  --scroll-gradient: none;      /* basvärdets toning är gjord för mörk bakgrund */
+  --policy-link-color: var(--af-link);
+  --badge-text-color: var(--af-text);
+  --fokus-ring: 2px solid var(--af-focus);
+
+  /* --- Typsnitt ------------------------------------------------------ */
+  --main-font: var(--af-font-sans);
+  --header-font: var(--af-font-serif);
+
+  /* --- Radier --------------------------------------------------------- */
+  --radius-md: var(--af-radius);
+  --radius-lg: var(--af-radius-card);
+}
