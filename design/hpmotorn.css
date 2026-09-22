@@ -1,0 +1,71 @@
+/* HP-motorn — www.hpmotorn.se
+ *
+ * Utkast 2026-09-22: samma mörka banner som teorimotorn (sajterna delar motor
+ * och alla ytfärger), med hpmotorns orange accent. Ur src/styles/global.css
+ * (repot Hejsangithub/hpmotorn):
+ *
+ *   --surface-2    #1c2029   ytan sajtens egen cookieruta låg på
+ *   --surface-3    #232837
+ *   --line-strong  #333a4a   dekorativa ramar
+ *   --text         #eef1f7
+ *   --muted        #9aa3b5
+ *   --accent       #ffb52e   orange, sajtens knappar
+ *   --accent-ink   #1a1204   mörk text PÅ accenten
+ *   --radius 16px · --radius-sm 10px · .btn.small 11px
+ *   typsnitt  system-ui (--font-body), rubriker Space Grotesk (--font-display)
+ *
+ * hpmotorn saknar teorimotorns --line-interactive. Samma #646e8c används för
+ * knappkanter och avslaget reglage, så kontrollerna klarar 3:1 även här.
+ *
+ * Kontrast mot bannerns bakgrund #1c2029:
+ *   text 14,4:1 · dämpad 6,4:1 · knapptext mot accent 10,5:1 · policylänk
+ *   9,2:1 · knappkant och avslaget reglage 3,2:1 · ikon mot ikonruta 7,2:1 ·
+ *   badge 11,2:1 · reglageknappen 3,7:1 av och 10,5:1 på.
+ *
+ * Reglageknappen är mörk, som på teorimotorn — Björn provade vit där och valde
+ * mörk (2026-09-22).
+ *
+ * Finjusteras i npm run design -- --site=hpmotorn.
+ */
+
+:root {
+  /* --- Bakgrund och text ------------------------------------------- */
+  --bg-main: #1c2029;
+  --text-main: #eef1f7;
+  --text-muted: #9aa3b5;
+  --bg-muted: #333a4a;        /* linjerna mellan kategorierna, tabellhuvudet */
+
+  /* --- Accent ------------------------------------------------------- */
+  /* Båda valknapparna i sajtens orange, jämbördiga. Mörk text på, som
+   * sajtens egna knappar. */
+  --accent-color: #ffb52e;
+  --btn-accent-text: #1a1204;
+  --btn-hover-filter: brightness(1.07);  /* sajtens egen .btn:hover */
+
+  /* --- Kanter ------------------------------------------------------- */
+  --border-color: #333a4a;
+  --btn-border: #646e8c;
+
+  /* --- Knappar ------------------------------------------------------ */
+  --bg-customize-btn: #232837;
+
+  /* --- Ikon och reglage --------------------------------------------- */
+  --logo-color: #ffb52e;
+  --bg-logo-wrapper: #37322a; /* sajtens --kvant-dim lagd på bannerns bakgrund */
+  --toggle-switch-bg: #646e8c;
+  --toggle-circle: #1a1204;
+
+  /* --- Detaljer ------------------------------------------------------ */
+  --policy-link-color: #ffb52e;
+  --badge-text-color: #eef1f7;
+  --fokus-ring: 2px solid #ffb52e;
+
+  /* --- Typsnitt ------------------------------------------------------ */
+  /* Sajtens egna variabler. Bannern laddar aldrig egna typsnitt. */
+  --main-font: var(--font-body);
+  --header-font: var(--font-display);
+
+  /* --- Radier --------------------------------------------------------- */
+  --radius-sm: 10px;
+  --radius-md: 11px;
+}
