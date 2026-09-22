@@ -1,0 +1,65 @@
+/* Teorimotorn — www.teorimotorn.se
+ *
+ * Utkast 2026-09-22: mörk banner ur sajtens egna variabler i
+ * src/styles/global.css (repot Hejsangithub/teorimotorn), inte gissade:
+ *
+ *   --surface-2         #1c2029   ytan sajtens egen cookieruta låg på
+ *   --surface-3         #232837
+ *   --line-strong       #333a4a   dekorativa ramar
+ *   --line-interactive  #646e8c   ramar på kontroller (3:1, WCAG 1.4.11)
+ *   --text              #eef1f7
+ *   --muted             #9aa3b5
+ *   --accent            #4da3ff   blå, sajtens knappar
+ *   --accent-ink        #041420   mörk text PÅ accenten
+ *   --radius 16px · --radius-sm 10px · .btn.small 11px
+ *   typsnitt  system-ui (--font-body), rubriker Space Grotesk (--font-display)
+ *
+ * Kontrast mot bannerns bakgrund #1c2029:
+ *   text 14,4:1 · dämpad 6,4:1 · knapptext mot accent 7,1:1 · policylänk
+ *   6,2:1 · knappkant och avslaget reglage 3,2:1 · ikon mot ikonruta 5,1:1 ·
+ *   badge 11,8:1 · reglageknappen 3,7:1 av och 7,1:1 på.
+ *
+ * Finjusteras i npm run design -- --site=teorimotorn.
+ */
+
+:root {
+  /* --- Bakgrund och text ------------------------------------------- */
+  --bg-main: #1c2029;
+  --text-main: #eef1f7;
+  --text-muted: #9aa3b5;
+  --bg-muted: #333a4a;        /* linjerna mellan kategorierna, tabellhuvudet */
+
+  /* --- Accent ------------------------------------------------------- */
+  /* Båda valknapparna i sajtens blå, jämbördiga. Mörk text på, som
+   * sajtens egna knappar. */
+  --accent-color: #4da3ff;
+  --btn-accent-text: #041420;
+  --btn-hover-filter: brightness(1.07);  /* sajtens egen .btn:hover */
+
+  /* --- Kanter ------------------------------------------------------- */
+  --border-color: #333a4a;
+  --btn-border: #646e8c;
+
+  /* --- Knappar ------------------------------------------------------ */
+  --bg-customize-btn: #232837;
+
+  /* --- Ikon och reglage --------------------------------------------- */
+  --logo-color: #4da3ff;
+  --bg-logo-wrapper: #223043; /* sajtens --teori-dim lagd på bannerns bakgrund */
+  --toggle-switch-bg: #646e8c;
+  --toggle-circle: #041420;   /* vit gav 2,6:1 mot den blå accenten */
+
+  /* --- Detaljer ------------------------------------------------------ */
+  --policy-link-color: #4da3ff;
+  --badge-text-color: #eef1f7;
+  --fokus-ring: 2px solid #4da3ff;
+
+  /* --- Typsnitt ------------------------------------------------------ */
+  /* Sajtens egna variabler. Bannern laddar aldrig egna typsnitt. */
+  --main-font: var(--font-body);
+  --header-font: var(--font-display);
+
+  /* --- Radier --------------------------------------------------------- */
+  --radius-sm: 10px;
+  --radius-md: 11px;
+}
